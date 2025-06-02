@@ -9,35 +9,35 @@
 </head>
 <body>
     <div id="game-container">
-        <div id="score-board" style="display: none;"> {/* Initially hidden */}
+        <div id="score-board" style="display: none;"> <!-- Initially hidden -->
             <span>Score: <span id="score">0</span></span>
             <span>Lives: <span id="lives">3</span></span>
             <button id="mute-btn" class="vt323-font">Mute</button>
         </div>
-        <div id="powerup-status" class="vt323-font" style="display: none;"></div> {/* Initially hidden */}
+        <div id="powerup-status" class="vt323-font" style="display: none;"></div> <!-- Initially hidden -->
 
-        <div id="game-area" style="display: none;"> {/* Initially hidden */}
-            {/* Game elements like paddle, ball, bricks will be added here by JavaScript */}
+        <div id="game-area" style="display: none;"> <!-- Initially hidden -->
+            <!-- Game elements like paddle, ball, bricks will be added here by JavaScript -->
         </div>
 
-        {/* Screens */}
+        <!-- Screens -->
         <div id="start-screen" class="game-screen vt323-font">
             <h1>Retro Breakout</h1>
             <button id="start-new-game-btn">Start New Game</button>
-            {/* "Resume Game" button will be for Phase 5 */}
+            <!-- "Resume Game" button will be for Phase 5 -->
         </div>
 
         <div id="level-cleared-screen" class="game-screen vt323-font" style="display: none;">
-            <h2 id="level-cleared-title">Level Cleared!</h2> {/* Changed ID for clarity */}
+            <h2 id="level-cleared-title">Level Cleared!</h2> <!-- Changed ID for clarity -->
             <button id="next-level-btn">Next Level</button>
         </div>
 
-        {/* Old game-over-message div is removed, replaced by this screen structure */}
+        <!-- Old game-over-message div is removed, replaced by this screen structure -->
         <div id="game-over-screen" class="game-screen vt323-font" style="display: none;">
-            <h2 id="game-over-main-title">Game Over!</h2> {/* Changed ID for clarity */}
+            <h2 id="game-over-main-title">Game Over!</h2> <!-- Changed ID for clarity -->
             <p>Final Score: <span id="final-score">0</span></p>
             <button id="play-again-btn">Play Again</button>
-            {/* High scores display will be for Phase 5 */}
+            <!-- High scores display will be for Phase 5 -->
         </div>
     </div>
     <audio id="sfx-paddle-hit" src="sounds/hitmulti.mp3" preload="auto"></audio>
