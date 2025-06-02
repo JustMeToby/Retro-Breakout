@@ -476,42 +476,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resizeGameArea() {
         const gameContainer = document.getElementById('game-container');
-        const gameArea = document.getElementById('game-area');
+        // const gameArea = document.getElementById('game-area'); // Already available in outer scope
+        // const scoreBoard = document.getElementById('score-board'); // Already available in outer scope
+        // const powerUpStatusDisplay = document.getElementById('powerup-status'); // Already available in outer scope
 
-        // Set gameArea base dimensions (unscaled) and transform origin for scaling
+        // Ensure gameArea, scoreBoard, and powerUpStatusDisplay are accessible
+        // They are defined in the outer scope of the DOMContentLoaded listener, so they are accessible here.
+
+        let hudHeight = 0;
+        if (scoreBoard && scoreBoard.style.display !== 'none') {
+            hudHeight += scoreBoard.offsetHeight;
+        }
+        if (powerUpStatusDisplay && powerUpStatusDisplay.style.display !== 'none') {
+            hudHeight += powerUpStatusDisplay.offsetHeight;
+        }
+
+        let finalScaledGameAreaWidth;
+        let finalScaledGameAreaHeight;
+
+        if (window.innerWidth < 1024) {
+            const maxTotalAllowedHeight = window.innerHeight * 0.98;
+            let availableHeightForGameArea = maxTotalAllowedHeight - hudHeight;
+            if (availableHeightForGameArea < 50) {
+                availableHeightForGameArea = 50;
+            }
+
+            const targetScaledGameAreaWidth = window.innerWidth * 0.98;
+            const targetScaledGameAreaHeightBasedOnWidth = targetScaledGameAreaWidth / ASPECT_RATIO;
+
+            if (targetScaledGameAreaHeightBasedOnWidth <= availableHeightForGameArea) {
+                finalScaledGameAreaWidth = targetScaledGameAreaWidth;
+                finalScaledGameAreaHeight = targetScaledGameAreaHeightBasedOnWidth;
+            } else {
+                finalScaledGameAreaHeight = availableHeightForGameArea;
+                finalScaledGameAreaWidth = finalScaledGameAreaHeight * ASPECT_RATIO;
+            }
+        } else {
+            finalScaledGameAreaWidth = GAME_WIDTH;
+            finalScaledGameAreaHeight = GAME_HEIGHT;
+            // hudHeight is still calculated and used for gameContainer.style.height below
+        }
+
+        currentGameScale = finalScaledGameAreaWidth / GAME_WIDTH;
+
+        gameContainer.style.width = finalScaledGameAreaWidth + 'px';
+        gameContainer.style.height = (finalScaledGameAreaHeight + hudHeight) + 'px';
+
+        // Set gameArea base dimensions (unscaled) and transform origin for scaling (preserved)
         gameArea.style.width = GAME_WIDTH + 'px';
         gameArea.style.height = GAME_HEIGHT + 'px';
         gameArea.style.transformOrigin = 'top left';
-
-        let viewportWidth = window.innerWidth;
-        let viewportHeight = window.innerHeight;
-
-        // Use global currentGameScale, update it here
-        // let newContainerWidth;
-        // let newContainerHeight;
-
-        let calculatedContainerWidth; // Renamed to avoid confusion before assignment
-        let calculatedContainerHeight; // Renamed to avoid confusion before assignment
-
-        if (viewportWidth >= 1024) {
-            calculatedContainerWidth = GAME_WIDTH; // Game renders at its native 600px width
-            calculatedContainerHeight = GAME_HEIGHT; // Game renders at its native 450px height
-            currentGameScale = 1; // No scaling
-        } else {
-            // Scale to fit viewport width (with some padding), respecting aspect ratio
-            calculatedContainerWidth = viewportWidth * 0.98; // Use 98% of viewport width
-            calculatedContainerHeight = calculatedContainerWidth / ASPECT_RATIO;
-
-            // If that makes it too tall, scale to fit viewport height instead (98% of viewport height)
-            if (calculatedContainerHeight > viewportHeight * 0.98) {
-                calculatedContainerHeight = viewportHeight * 0.98;
-                calculatedContainerWidth = calculatedContainerHeight * ASPECT_RATIO; // Corrected: was / ASPECT_RATIO
-            }
-            currentGameScale = calculatedContainerWidth / GAME_WIDTH; // Calculate scale based on the new width vs original
-        }
-
-        gameContainer.style.width = calculatedContainerWidth + 'px';
-        gameContainer.style.height = calculatedContainerHeight + 'px';
         gameArea.style.transform = 'scale(' + currentGameScale + ')';
     }
 
@@ -549,6 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showScreen(null); // Hide all overlay screens
         if (scoreBoard) scoreBoard.style.display = 'flex';
         if (powerUpStatusDisplay) powerUpStatusDisplay.style.display = 'block';
+        resizeGameArea(); // Call resizeGameArea to adjust layout after HUD elements are shown
         if (gameArea) gameArea.style.display = 'block';
     }
 
