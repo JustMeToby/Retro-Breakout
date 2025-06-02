@@ -147,3 +147,21 @@ body {
 .hidden {
     display: none !important;
 }
+
+#mute-btn {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    padding: 5px 10px;
+    background-color: #f00; /* Red for 'Mute' state */
+    color: #fff; /* White text */
+    border: 2px solid #fff;
+    box-shadow: 0 0 3px #fff;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-left: 10px; /* Space from lives display */
+}
+
+#mute-btn:hover {
+    background-color: #c00; /* Darker red on hover */
+    box-shadow: 0 0 5px #fff;
+}

@@ -20,6 +20,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameOverMainTitle = document.getElementById('game-over-main-title');
     const finalScoreDisplay = document.getElementById('final-score');
 
+    // Audio elements
+    const sfxPaddleHit = document.getElementById('sfx-paddle-hit');
+    const sfxBrickHitBreak = document.getElementById('sfx-brick-hit-break');
+    const sfxBrickHitSolid = document.getElementById('sfx-brick-hit-solid');
+    const sfxWallHit = document.getElementById('sfx-wall-hit');
+    const sfxLifeLost = document.getElementById('sfx-life-lost');
+    const sfxLevelComplete = document.getElementById('sfx-level-complete');
+    const sfxGameOver = document.getElementById('sfx-game-over');
+    const sfxPowerupActivate = document.getElementById('sfx-powerup-activate');
+    const sfxPowerupDeactivate = document.getElementById('sfx-powerup-deactivate');
+    const bgmMusic = document.getElementById('bgm-music');
+    const muteBtn = document.getElementById('mute-btn');
+
     const GAME_STATE = {
         MENU: 0,
         PLAYING: 1,
@@ -74,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const BRICK_OFFSET_TOP = 30; const BRICK_OFFSET_LEFT = 2;
 
     let score = 0; let lives = 3;
+    let isMuted = false;
     let gameRunning = true; // Will be synced with currentGameState
     let bricks = []; let ballLaunched = false;
     const PADDLE_SPEED = 8;
@@ -203,13 +217,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (ballLaunched) { /* ... wall collisions ... */
-                if (currentBall.y - currentBall.radius < 0) { currentBall.y = currentBall.radius; currentBall.dy *= -1; }
-                if (currentBall.x - currentBall.radius < 0) { currentBall.x = currentBall.radius; currentBall.dx *= -1; }
-                else if (currentBall.x + currentBall.radius > GAME_WIDTH) { currentBall.x = GAME_WIDTH - currentBall.radius; currentBall.dx *= -1; }
+                if (currentBall.y - currentBall.radius < 0) { currentBall.y = currentBall.radius; currentBall.dy *= -1; playSound(sfxWallHit); }
+                if (currentBall.x - currentBall.radius < 0) { currentBall.x = currentBall.radius; currentBall.dx *= -1; playSound(sfxWallHit); }
+                else if (currentBall.x + currentBall.radius > GAME_WIDTH) { currentBall.x = GAME_WIDTH - currentBall.radius; currentBall.dx *= -1; playSound(sfxWallHit); }
                 if (currentBall.y + currentBall.radius > GAME_HEIGHT) {
                     currentBall.element.remove(); balls.splice(i, 1);
                     if (balls.length === 0) {
-                        lives--; livesDisplay.textContent = lives; deactivateAllPowerUps(true);
+                        lives--; livesDisplay.textContent = lives; playSound(sfxLifeLost); deactivateAllPowerUps(true);
                         if (lives <= 0) { handleGameOver("Game Over!"); }
                         else { ballLaunched = false;
                                balls.push(createNewBall(paddle.x + paddle.width/2, paddle.y - BALL_RADIUS - 1, (Math.random() > 0.5 ? 1:-1)*currentBaseBallSpeed_dx, currentBaseBallSpeed_dy, `main_${Date.now()}`));
@@ -222,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  if (currentBall.x + currentBall.radius > paddle.x && currentBall.x - currentBall.radius < paddle.x + paddle.width &&
                      currentBall.y + currentBall.radius > paddle.y && currentBall.y - currentBall.radius < paddle.y + paddle.height) {
                     currentBall.y = paddle.y - currentBall.radius; currentBall.dy *= -1;
+                    playSound(sfxPaddleHit);
                 }
             }
             if (ballLaunched) { /* ... brick collision ... */
@@ -235,10 +250,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 currentBall.dy *= -1;
                                 if (brick.type !== 'unbreakable') {
                                     brick.hp--;
-                                    if (brick.hp <= 0) { brick.status = 0; score += 10; scoreDisplay.textContent = score;
+                                    if (brick.hp <= 0) {
+                                        brick.status = 0; score += 10; scoreDisplay.textContent = score;
+                                        playSound(sfxBrickHitBreak);
                                         if (brick.powerupType) activatePowerUp(brick.powerupType, currentBall);
-                                    } else { console.log(`Brick hit, HP: ${brick.hp}`); }
-                                } else { console.log("Unbreakable brick hit!"); }
+                                    } else {
+                                        playSound(sfxBrickHitSolid);
+                                        console.log(`Brick hit, HP: ${brick.hp}`);
+                                    }
+                                } else {
+                                    playSound(sfxBrickHitSolid);
+                                    console.log("Unbreakable brick hit!");
+                                }
                                 hitBrick = true; break;
                             }
                         }
@@ -260,14 +283,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentLevelIndex < levels.length - 1) {
                 currentGameState = GAME_STATE.LEVEL_TRANSITION;
                 levelClearedTitle.textContent = `Level ${currentLevelIndex + 1} Cleared!`;
+                playSound(sfxLevelComplete);
                 showScreen(levelClearedScreen);
             } else {
+                playSound(sfxLevelComplete); // Or a distinct "win" sound
                 handleGameOver("You Win!");
             }
         }
     }
 
     function handleGameOver(message = "Game Over!") {
+        playSound(sfxGameOver);
+        if (bgmMusic) {
+            bgmMusic.pause();
+        }
         currentGameState = GAME_STATE.GAME_OVER;
         deactivateAllPowerUps(true);
         gameOverMainTitle.textContent = message;
@@ -284,6 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function activatePowerUp(type, currentHitBall) { /* ... same as before ... */
         console.log(`Power-up ${type} activated!`);
+        playSound(sfxPowerupActivate);
         switch (type) {
             case 'life': lives++; livesDisplay.textContent = lives; break;
             case 'slow_ball':
@@ -317,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function deactivatePowerUp(type, ballRef, isResetCtx = false) { /* ... same as before, but ensure ballRef is used if not null for slow/speed ... */
         console.log(`Power-up ${type} deactivated.`);
+        playSound(sfxPowerupDeactivate);
         switch (type) {
             case 'slow_ball':
                 if (activePowerUps.slow_ball.timerId) { clearTimeout(activePowerUps.slow_ball.timerId); activePowerUps.slow_ball.timerId = null; }
@@ -405,6 +436,11 @@ document.addEventListener('DOMContentLoaded', () => {
         showGameElements();
         currentGameState = GAME_STATE.PLAYING;
         init();
+        if (!isMuted && bgmMusic && bgmMusic.paused) {
+            bgmMusic.play().catch(error => console.warn("Error starting BGM:", error));
+        } else if (bgmMusic) {
+            bgmMusic.muted = isMuted; // Ensure mute state is respected
+        }
     });
 
     nextLevelBtn.addEventListener('click', () => {
@@ -419,19 +455,68 @@ document.addEventListener('DOMContentLoaded', () => {
         balls.push(newPrimaryBall); if(newPrimaryBall.element && newPrimaryBall.element.parentElement !== gameArea) gameArea.appendChild(newPrimaryBall.element);
         loadLevel(currentLevelIndex);
         currentGameState = GAME_STATE.PLAYING;
+        if (!isMuted && bgmMusic && bgmMusic.paused) { // If it was somehow paused
+            bgmMusic.play().catch(error => console.warn("Error continuing BGM:", error));
+        } else if (bgmMusic) {
+             bgmMusic.muted = isMuted;
+        }
     });
 
     playAgainBtn.addEventListener('click', () => {
         showGameElements();
         currentGameState = GAME_STATE.PLAYING;
         init();
+        if (!isMuted && bgmMusic && bgmMusic.paused) {
+            bgmMusic.play().catch(error => console.warn("Error starting BGM:", error));
+        } else if (bgmMusic) {
+            bgmMusic.muted = isMuted;
+        }
     });
 
     function initialPageLoadSetup() {
         currentGameState = GAME_STATE.MENU;
         showScreen(startScreen);
         update();
+        if (bgmMusic) {
+            bgmMusic.pause();
+            // bgmMusic.currentTime = 0; // Optional: rewind BGM
+        }
     }
 
     initialPageLoadSetup();
+
+    // --- Audio Management ---
+    function playSound(soundElement) {
+        if (!isMuted && soundElement) {
+            soundElement.currentTime = 0; // Rewind to start
+            soundElement.play().catch(error => console.warn("Error playing sound:", error)); // Play and catch potential errors
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        if (muteBtn) { // Check if muteBtn exists
+            muteBtn.textContent = isMuted ? "Unmute" : "Mute";
+            muteBtn.style.backgroundColor = isMuted ? '#0a0' : '#f00'; // Green for Unmute, Red for Mute
+        }
+
+        if (bgmMusic) { // Handle BGM specifically
+            bgmMusic.muted = isMuted; // This is the primary way to mute HTML5 audio element
+            if (!isMuted && currentGameState === GAME_STATE.PLAYING && bgmMusic.paused) {
+                // If unmuting, game is playing, and music was programmatically paused (e.g. by muting)
+                bgmMusic.play().catch(error => console.warn("Error playing BGM on unmute:", error));
+            } else if (isMuted && !bgmMusic.paused) {
+                // If muting and music is playing
+                bgmMusic.pause(); // Pause it to save resources, .muted is already true
+            }
+        }
+        // For immediate effect on already playing SFX (optional, good for testing)
+        // This part is tricky as SFX are short-lived. Muting them globally is simpler.
+        // For now, bgmMusic.muted covers the main continuous sound.
+        // SFX will be checked via 'isMuted' in playSound.
+    }
+
+    if (muteBtn) { // Check if muteBtn exists before adding listener
+        muteBtn.addEventListener('click', toggleMute);
+    }
 });

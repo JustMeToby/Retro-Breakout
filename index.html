@@ -12,6 +12,7 @@
         <div id="score-board" style="display: none;"> {/* Initially hidden */}
             <span>Score: <span id="score">0</span></span>
             <span>Lives: <span id="lives">3</span></span>
+            <button id="mute-btn" class="vt323-font">Mute</button>
         </div>
         <div id="powerup-status" class="vt323-font" style="display: none;"></div> {/* Initially hidden */}
 
@@ -39,6 +40,16 @@
             {/* High scores display will be for Phase 5 */}
         </div>
     </div>
+    <audio id="sfx-paddle-hit" src="sounds/hitmulti.mp3" preload="auto"></audio>
+    <audio id="sfx-brick-hit-break" src="sounds/hitbrick.mp3" preload="auto"></audio>
+    <audio id="sfx-brick-hit-solid" src="sounds/hitmulti.mp3" preload="auto"></audio>
+    <audio id="sfx-wall-hit" src="sounds/hitwall.mp3" preload="auto"></audio>
+    <audio id="sfx-life-lost" src="sounds/balldrop.mp3" preload="auto"></audio>
+    <audio id="sfx-level-complete" src="sounds/gameover.mp3" preload="auto"></audio>
+    <audio id="sfx-game-over" src="sounds/gameover.mp3" preload="auto"></audio>
+    <audio id="sfx-powerup-activate" src="sounds/hitexplode.mp3" preload="auto"></audio>
+    <audio id="sfx-powerup-deactivate" src="sounds/balldrop.mp3" preload="auto"></audio>
+    <audio id="bgm-music" src="sounds/music.mp3" preload="auto" loop></audio>
     <script src="script.js"></script>
 </body>
 </html>
