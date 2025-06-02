@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     let currentGameState = GAME_STATE.MENU;
     let saveIntervalId = null; // For saving game state
+    let pauseStartTime = 0; // For tracking when pause began
 
     const MAX_HIGH_SCORES = 5; // Max number of high scores to store
 
@@ -68,9 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentBaseBallSpeed_dy;
 
     let activePowerUps = {
-        slow_ball: { active: false, timerId: null, affectedBalls: [], deactivationTime: 0 },
-        multi_ball: { active: false, timerId: null, extraBalls: [], deactivationTime: 0 },
-        speed_ball: { active: false, timerId: null, affectedBalls: [], deactivationTime: 0 }
+        slow_ball: { active: false, timerId: null, affectedBalls: [], deactivationTime: 0, remainingDurationBeforePause: 0 },
+        multi_ball: { active: false, timerId: null, extraBalls: [], deactivationTime: 0, remainingDurationBeforePause: 0 },
+        speed_ball: { active: false, timerId: null, affectedBalls: [], deactivationTime: 0, remainingDurationBeforePause: 0 }
     };
 
     const brickTypeMapping = {
@@ -278,11 +279,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                         if (brick.powerupType) activatePowerUp(brick.powerupType, currentBall);
                                     } else {
                                         playSound(sfxBrickHitSolid);
-                                        console.log(`Brick hit, HP: ${brick.hp}`);
+                                        // console.log(`Brick hit, HP: ${brick.hp}`); // Debug
                                     }
                                 } else {
                                     playSound(sfxBrickHitSolid);
-                                    console.log("Unbreakable brick hit!");
+                                    // console.log("Unbreakable brick hit!"); // Debug
                                 }
                                 hitBrick = true; break;
                             }
@@ -420,7 +421,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     // For multi_ball, save IDs of extra balls
                     extraBalls: type === 'multi_ball' ? pu.extraBalls.map(b => b.id) : undefined,
                     // For slow_ball and speed_ball, save IDs of affected balls
-                    affectedBalls: (type === 'slow_ball' || type === 'speed_ball') ? pu.affectedBalls.map(b => b.id) : undefined
+                    affectedBalls: (type === 'slow_ball' || type === 'speed_ball') ? pu.affectedBalls.map(b => b.id) : undefined,
+                    remainingDurationBeforePause: pu.remainingDurationBeforePause > 0 ? pu.remainingDurationBeforePause : 0 // Save this if game is saved during pause
                 };
             }
 
@@ -703,13 +705,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    document.addEventListener('keydown', (e) => { /* ... guarded ... */
+    // Combined event listener for keydown
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'p' || e.key === 'P') {
+            // Allow pausing from PLAYING or PAUSED state.
+            if (currentGameState === GAME_STATE.PLAYING || currentGameState === GAME_STATE.PAUSED) {
+                handlePauseToggle();
+            }
+        }
+
+        // Guard game control inputs by PLAYING state
         if (currentGameState !== GAME_STATE.PLAYING) return;
+
         if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') paddle.moveLeft=true;
         else if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') paddle.moveRight=true;
         else if ((e.key===' '||e.code==='Space') && !ballLaunched && balls.length > 0) ballLaunched=true;
     });
-    document.addEventListener('keyup', (e) => { /* ... unguarded for stopping movement ... */
+
+    document.addEventListener('keyup', (e) => { 
         if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') paddle.moveLeft=false;
         else if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') paddle.moveRight=false;
     });
@@ -869,13 +882,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Screen Management Functions (Corrected) ---
     function showScreen(screenToShow) {
-        if (startScreen) startScreen.style.display = 'none';
-        if (levelClearedScreen) levelClearedScreen.style.display = 'none';
-        if (gameOverScreen) gameOverScreen.style.display = 'none';
+        // Hide all screens first by removing 'visible-screen' and setting display to none
+        [startScreen, levelClearedScreen, gameOverScreen].forEach(screen => {
+            if (screen) {
+                screen.classList.remove('visible-screen');
+                screen.style.display = 'none';
+            }
+        });
+
+        // Hide game-related elements that are not part of a full screen overlay
         if (scoreBoard) scoreBoard.style.display = 'none';
         if (powerUpStatusDisplay) powerUpStatusDisplay.style.display = 'none';
         if (gameArea) gameArea.style.display = 'none';
-        if (screenToShow) screenToShow.style.display = 'flex';
+        
+        if (screenToShow) {
+            screenToShow.style.display = 'flex'; // Set display before triggering transition
+            // Timeout to allow display property to apply before adding class for transition
+            setTimeout(() => {
+                screenToShow.classList.add('visible-screen');
+            }, 10); // Small delay like 10ms is usually enough
+        }
     }
 
     function showGameElements() {
@@ -935,7 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showGameElements();
         currentBaseBallSpeed_dx = INITIAL_BALL_SPEED_DX+(currentLevelIndex*LEVEL_SPEED_INCREASE_FACTOR*INITIAL_BALL_SPEED_DX);
         currentBaseBallSpeed_dy = INITIAL_BALL_SPEED_DY-(currentLevelIndex*LEVEL_SPEED_INCREASE_FACTOR*Math.abs(INITIAL_BALL_SPEED_DY));
-        console.log(`Starting Level ${currentLevelIndex+1} base speed: dx=${currentBaseBallSpeed_dx.toFixed(2)}, dy=${currentBaseBallSpeed_dy.toFixed(2)}`);
+        // console.log(`Starting Level ${currentLevelIndex+1} base speed: dx=${currentBaseBallSpeed_dx.toFixed(2)}, dy=${currentBaseBallSpeed_dy.toFixed(2)}`);
         ballLaunched = false; deactivateAllPowerUps(true);
         balls.forEach(b => b.element.remove()); balls = [];
         const newPrimaryBall = createNewBall(paddle.x+paddle.width/2, paddle.y-BALL_RADIUS-1, (Math.random()>0.5?1:-1)*currentBaseBallSpeed_dx, currentBaseBallSpeed_dy, `main_${Date.now()}`);
@@ -1054,21 +1080,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (bgmMusic) { // Handle BGM specifically
             bgmMusic.muted = isMuted; // This is the primary way to mute HTML5 audio element
-            if (!isMuted && currentGameState === GAME_STATE.PLAYING && bgmMusic.paused) {
-                // If unmuting, game is playing, and music was programmatically paused (e.g. by muting)
+            if (!isMuted && currentGameState === GAME_STATE.PLAYING && bgmMusic.paused) { 
                 bgmMusic.play().catch(error => console.warn("Error playing BGM on unmute:", error));
-            } else if (isMuted && !bgmMusic.paused) {
-                // If muting and music is playing
-                bgmMusic.pause(); // Pause it to save resources, .muted is already true
+            } else if (isMuted && !bgmMusic.paused && currentGameState !== GAME_STATE.PAUSED) { 
+                bgmMusic.pause();
             }
         }
-        // For immediate effect on already playing SFX (optional, good for testing)
-        // This part is tricky as SFX are short-lived. Muting them globally is simpler.
-        // For now, bgmMusic.muted covers the main continuous sound.
-        // SFX will be checked via 'isMuted' in playSound.
     }
 
-    if (muteBtn) { // Check if muteBtn exists before adding listener
+    if (muteBtn) { 
         muteBtn.addEventListener('click', toggleMute);
     }
+
+    // --- Pause Functionality ---
+    function handlePauseToggle() {
+        if (currentGameState === GAME_STATE.PLAYING) {
+            currentGameState = GAME_STATE.PAUSED;
+            if (pauseBtn) pauseBtn.textContent = "Resume";
+            if (bgmMusic && !bgmMusic.paused) bgmMusic.pause(); 
+            pauseStartTime = Date.now();
+            if (pausedMessageElement) pausedMessageElement.style.display = 'block';
+
+            // Pause active power-up timers
+            Object.keys(activePowerUps).forEach(type => {
+                const powerUp = activePowerUps[type];
+                if (powerUp.active && powerUp.timerId) { // If power-up is active and has a timer
+                    clearTimeout(powerUp.timerId); // Clear the existing timer
+                    // Calculate and store remaining duration
+                    powerUp.remainingDurationBeforePause = powerUp.deactivationTime - Date.now();
+                }
+            });
+
+            // Pause the game state saving interval
+            if (saveIntervalId !== null) { 
+                clearInterval(saveIntervalId);
+                saveIntervalId = null;
+            }
+
+        } else if (currentGameState === GAME_STATE.PAUSED) {
+            currentGameState = GAME_STATE.PLAYING;
+            if (pauseBtn) pauseBtn.textContent = "Pause";
+            if (!isMuted && bgmMusic && bgmMusic.paused) { 
+                 bgmMusic.play().catch(error => console.warn("Error resuming BGM:", error));
+            }
+            if (pausedMessageElement) pausedMessageElement.style.display = 'none';
+
+            // const pausedDuration = Date.now() - pauseStartTime; // Duration game was paused
+
+            // Resume active power-up timers
+            Object.keys(activePowerUps).forEach(type => {
+                const powerUp = activePowerUps[type];
+                if (powerUp.active && powerUp.remainingDurationBeforePause > 0) {
+                    // Update deactivation time based on when game is resumed
+                    powerUp.deactivationTime = Date.now() + powerUp.remainingDurationBeforePause;
+                    // Restart the timer with the remaining duration
+                    powerUp.timerId = setTimeout(() => deactivatePowerUp(type), powerUp.remainingDurationBeforePause);
+                    powerUp.remainingDurationBeforePause = 0; // Reset stored remaining duration
+                } else if (powerUp.active && powerUp.timerId && powerUp.remainingDurationBeforePause <= 0) {
+                    // If timer should have expired during pause, deactivate it now
+                    deactivatePowerUp(type);
+                }
+            });
+
+            // Resume the game state saving interval
+             if (saveIntervalId === null && currentGameState === GAME_STATE.PLAYING) { 
+                 saveIntervalId = setInterval(saveGameState, 1000);
+             }
+        }
+    }
+
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', handlePauseToggle);
+    }
+    // The keydown listener for 'P' is now part of the combined keydown listener above.
 });

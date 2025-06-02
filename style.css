@@ -39,6 +39,9 @@ body {
     min-height: 20px; /* So it doesn't collapse game layout when empty */
     font-size: 18px;
     border-bottom: 1px dashed #555; /* Optional: visual separator */
+    white-space: nowrap; /* Prevent wrapping */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis if text overflows */
 }
 
 #game-area {
@@ -104,6 +107,14 @@ body {
     text-align: center;
     z-index: 10; /* Ensure screens are on top */
     color: #fff; /* Default text color for screens */
+    opacity: 0; /* Initially hidden for transition */
+    visibility: hidden; /* Initially hidden for transition */
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.game-screen.visible-screen { /* New class to make screen visible */
+    opacity: 1;
+    visibility: visible;
 }
 
 .game-screen h1 {
@@ -134,7 +145,20 @@ body {
 }
 .game-screen button:hover {
     background-color: #0c0; /* Darker green on hover */
-    box-shadow: 0 0 10px #fff;
+    box-shadow: 0 0 10px #fff; /* Slightly larger shadow on hover */
+}
+
+.game-screen button:active {
+    background-color: #0a0; /* Even darker green */
+    transform: scale(0.95);
+    box-shadow: 0 0 5px #fff; /* Reduce shadow slightly on active */
+}
+
+/* General button focus style for accessibility */
+button:focus-visible {
+    outline: 2px solid #0ff; /* Bright cyan outline, stands out */
+    outline-offset: 1px; /* Adjust as needed */
+    box-shadow: 0 0 6px #0ff; /* Optional: matching glow for focus */
 }
 
 .vt323-font { /* Utility class, though #game-container * should cover most */
@@ -161,8 +185,55 @@ body {
 
 #mute-btn:hover {
     background-color: #c00; /* Darker red on hover */
-    box-shadow: 0 0 5px #fff;
+    box-shadow: 0 0 8px #fff; /* Enhanced shadow */
 }
+
+#mute-btn:active {
+    background-color: #a00; /* Even darker red */
+    transform: scale(0.95);
+}
+
+#pause-btn {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    padding: 5px 10px;
+    background-color: #ff0; /* Yellow for 'Pause' state */
+    color: #000; /* Black text */
+    border: 2px solid #fff;
+    box-shadow: 0 0 3px #fff;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-left: 10px; /* Space from mute button */
+}
+
+#pause-btn:hover {
+    background-color: #c0c000; /* Darker yellow */
+    box-shadow: 0 0 8px #ff0; /* Enhanced shadow */
+}
+
+#pause-btn:active {
+    background-color: #a0a000; /* Even darker yellow */
+    transform: scale(0.95);
+}
+
+#paused-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    color: #ff0; /* Yellow text */
+    text-align: center;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.75); /* Per plan */
+    border: 2px solid #fff; /* Per plan */
+    border-radius: 0; /* Sharp corners for pixel look, per plan */
+    z-index: 20; /* Ensure it's on top, per plan */
+    font-family: 'VT323', monospace; /* Explicitly set, per plan */
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.5); /* Subtle glow, per plan */
+    /* display: none; is handled by script.js and screen transitions */
+}
+
 
 /* --- Phase 5 UI Element Styles --- */
 
@@ -183,7 +254,13 @@ body {
 
 #resume-game-btn:hover {
     background-color: #00c; /* Darker blue on hover */
-    box-shadow: 0 0 10px #fff;
+    box-shadow: 0 0 10px #fff; /* Slightly larger shadow on hover */
+}
+
+#resume-game-btn:active {
+    background-color: #00a; /* Even darker blue */
+    transform: scale(0.95);
+    box-shadow: 0 0 5px #fff; /* Reduce shadow slightly on active */
 }
 
 /* High Score Display Areas */
@@ -282,5 +359,11 @@ body {
 
 #submit-initials-btn:hover {
     background-color: #0c0; /* Darker green */
-    box-shadow: 0 0 10px #fff;
+    box-shadow: 0 0 10px #fff; /* Slightly larger shadow on hover */
+}
+
+#submit-initials-btn:active {
+    background-color: #0a0; /* Even darker green */
+    transform: scale(0.95);
+    box-shadow: 0 0 5px #fff; /* Reduce shadow slightly on active */
 }
