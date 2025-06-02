@@ -163,3 +163,124 @@ body {
     background-color: #c00; /* Darker red on hover */
     box-shadow: 0 0 5px #fff;
 }
+
+/* --- Phase 5 UI Element Styles --- */
+
+/* Resume Game Button */
+#resume-game-btn {
+    font-family: 'VT323', monospace;
+    font-size: 24px;
+    padding: 10px 20px;
+    background-color: #00f; /* Blue button - to differentiate from Start New Game */
+    color: #fff; /* White text */
+    border: 2px solid #fff;
+    box-shadow: 0 0 5px #fff;
+    cursor: pointer;
+    margin-top: 15px; /* Space from other buttons or elements */
+    text-transform: uppercase;
+    display: none; /* Initially hidden, JS controls visibility */
+}
+
+#resume-game-btn:hover {
+    background-color: #00c; /* Darker blue on hover */
+    box-shadow: 0 0 10px #fff;
+}
+
+/* High Score Display Areas */
+#high-scores-start-screen,
+#high-scores-game-over-screen {
+    margin-top: 20px;
+    padding: 10px;
+    width: 80%; /* Max width for the high score box */
+    max-width: 400px; /* Ensure it doesn't get too wide on larger screens */
+    border: 1px dashed #555; /* Optional border for the score area */
+    background-color: rgba(0,0,0,0.3); /* Slightly different background if needed */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+#high-scores-start-screen h2,
+#high-scores-game-over-screen h2 {
+    font-size: 28px; /* Slightly smaller than screen titles */
+    color: #ff0; /* Yellow, consistent with other h2 */
+    margin-bottom: 15px;
+    margin-top: 5px; /* Reduced top margin for h2 within these boxes */
+}
+
+#high-scores-start-screen ol,
+#high-scores-game-over-screen ol {
+    list-style-type: decimal;
+    padding-left: 30px; /* Indentation for numbers */
+    margin: 10px auto; /* Centering the list itself if its width is less than container */
+    /* max-width: 90%; */ /* Relative to its container - might not be needed if text-align: left on li */
+}
+
+#high-scores-start-screen li,
+#high-scores-game-over-screen li,
+#high-scores-start-screen p, /* For "No high scores" message */
+#high-scores-game-over-screen p {
+    font-size: 20px; /* Increased for better readability */
+    margin-bottom: 8px;
+    text-align: left; /* Align text to the left within the list item */
+    color: #fff; /* Ensure text is white */
+}
+
+/* Initials Input Container */
+#initials-input-container {
+    display: none; /* Initially hidden, JS controls visibility */
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #777;
+    background-color: rgba(20,20,20,0.5); /* Darker overlay for focus */
+    width: 80%;
+    max-width: 300px; /* Constrain width */
+    box-sizing: border-box;
+}
+
+/* Optional: Add a label/prompt for the initials input */
+#initials-input-container p.prompt {
+    font-size: 20px;
+    margin-bottom: 10px;
+    color: #ff0; /* Yellow text */
+}
+
+/* Player Initials Input Field */
+#player-initials-input {
+    font-family: 'VT323', monospace;
+    font-size: 24px; /* Larger font for input */
+    text-transform: uppercase;
+    padding: 8px;
+    margin-bottom: 15px; /* Increased margin */
+    width: 120px; /* Wider for 3 chars + padding */
+    text-align: center;
+    border: 2px solid #fff;
+    background-color: #222; /* Dark background */
+    color: #0f0; /* Green input text */
+    caret-color: #0f0; /* Green caret */
+    outline: none;
+}
+
+#player-initials-input:focus {
+    border-color: #0f0; /* Green border on focus */
+    box-shadow: 0 0 8px #0f0;
+}
+
+/* Submit Initials Button */
+#submit-initials-btn {
+    font-family: 'VT323', monospace;
+    font-size: 20px; /* Slightly smaller than main screen buttons */
+    padding: 8px 15px;
+    background-color: #0f0; /* Green button */
+    color: #000; /* Black text */
+    border: 2px solid #fff;
+    box-shadow: 0 0 5px #fff;
+    cursor: pointer;
+    margin-top: 5px; /* Small margin from input field */
+    text-transform: uppercase;
+}
+
+#submit-initials-btn:hover {
+    background-color: #0c0; /* Darker green */
+    box-shadow: 0 0 10px #fff;
+}
