@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const GAME_WIDTH = 600; const GAME_HEIGHT = 450;
+    const ASPECT_RATIO = GAME_WIDTH / GAME_HEIGHT;
     const PADDLE_WIDTH = 100; const PADDLE_HEIGHT = 15;
     const PADDLE_Y_OFFSET = 20; const BALL_RADIUS = 8;
     const BRICK_WIDTH = GAME_WIDTH / 10 - 4; // Assuming 10 cols for BRICK_WIDTH calc
@@ -87,17 +88,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const BRICK_OFFSET_TOP = 30; const BRICK_OFFSET_LEFT = 2;
 
     let score = 0; let lives = 3;
+    let currentGameScale = 1;
+    let isPaddleDragging = false;
     let isMuted = false;
     let gameRunning = true; // Will be synced with currentGameState
     let bricks = []; let ballLaunched = false;
     const PADDLE_SPEED = 8;
-
-    function setupGameContainer() {
-        const container = document.getElementById('game-container');
-        container.style.width = `${GAME_WIDTH}px`;
-        gameArea.style.width = `${GAME_WIDTH}px`;
-        gameArea.style.height = `${GAME_HEIGHT}px`;
-    }
 
     const paddle = {
         x: GAME_WIDTH / 2 - PADDLE_WIDTH / 2, y: GAME_HEIGHT - PADDLE_HEIGHT - PADDLE_Y_OFFSET,
@@ -192,9 +188,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function update() {
-        gameRunning = (currentGameState === GAME_STATE.PLAYING);
+        // gameRunning = (currentGameState === GAME_STATE.PLAYING); // Moved down
 
-        if (!gameRunning) {
+        const orientationMessageElement = document.getElementById('orientation-message');
+        const orientationMessageVisible = orientationMessageElement && orientationMessageElement.style.display === 'flex';
+
+        if (orientationMessageVisible && currentGameState === GAME_STATE.PLAYING) {
+            // If portrait message is up and game is supposed to be playing, effectively pause it.
+            // Draw current state but don't update physics or logic.
+            drawPaddle(); // Keep elements visible
+            drawBalls();
+            drawBricks();
+            requestAnimationFrame(update);
+            return; // Skip game logic updates
+        }
+
+        gameRunning = (currentGameState === GAME_STATE.PLAYING); // Now set gameRunning
+
+        if (!gameRunning) { // This handles PAUSED, MENU, etc. states correctly
             requestAnimationFrame(update);
             return;
         }
@@ -383,19 +394,128 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') paddle.moveLeft=false;
         else if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') paddle.moveRight=false;
     });
-    gameArea.addEventListener('mousemove', (e) => { /* ... guarded ... */
+    gameArea.addEventListener('mousemove', (e) => {
         if (currentGameState !== GAME_STATE.PLAYING) return;
-        const rect = gameArea.getBoundingClientRect(); let newPaddleX = e.clientX - rect.left - paddle.width/2;
-        if (newPaddleX < 0) newPaddleX = 0; if (newPaddleX + paddle.width > GAME_WIDTH) newPaddleX = GAME_WIDTH - paddle.width;
-        paddle.x = newPaddleX; if (!ballLaunched && balls.length > 0 && balls[0]) balls[0].x = paddle.x + paddle.width/2;
+        const rect = gameArea.getBoundingClientRect();
+        const scale = currentGameScale || 1; // Ensure scale is defined, default to 1
+
+        let mouseXInGame = (e.clientX - rect.left) / scale;
+
+        let newPaddleX = mouseXInGame - (paddle.width / 2);
+
+        if (newPaddleX < 0) newPaddleX = 0;
+        if (newPaddleX + paddle.width > GAME_WIDTH) newPaddleX = GAME_WIDTH - paddle.width;
+        paddle.x = newPaddleX;
+        if (!ballLaunched && balls.length > 0 && balls[0]) {
+            balls[0].x = paddle.x + paddle.width / 2;
+        }
     });
     gameArea.addEventListener('click', () => { /* ... guarded ... */
         if (currentGameState !== GAME_STATE.PLAYING) return;
         if (!ballLaunched && balls.length > 0) ballLaunched = true;
     });
 
+    // Touch Start
+    gameArea.addEventListener('touchstart', (e) => {
+        if (currentGameState !== GAME_STATE.PLAYING) return;
+
+        const touch = e.touches[0];
+        const rect = gameArea.getBoundingClientRect();
+        const scale = currentGameScale || 1;
+
+        let touchXInGame = (touch.clientX - rect.left) / scale;
+        let touchYInGame = (touch.clientY - rect.top) / scale;
+
+        // Check if touch is on the paddle
+        if (touchXInGame >= paddle.x &&
+            touchXInGame <= paddle.x + paddle.width &&
+            touchYInGame >= paddle.y &&
+            touchYInGame <= paddle.y + paddle.height) {
+            isPaddleDragging = true;
+            // Update paddle position immediately to center it on touch
+            let newPaddleX = touchXInGame - (paddle.width / 2);
+            if (newPaddleX < 0) newPaddleX = 0;
+            if (newPaddleX + paddle.width > GAME_WIDTH) newPaddleX = GAME_WIDTH - paddle.width;
+            paddle.x = newPaddleX;
+            if (!ballLaunched && balls.length > 0 && balls[0]) {
+                balls[0].x = paddle.x + paddle.width / 2;
+            }
+            e.preventDefault(); // Prevent scrolling if drag starts on paddle
+        }
+    }, { passive: false }); // passive: false needed for preventDefault
+
+    // Touch Move
+    gameArea.addEventListener('touchmove', (e) => {
+        if (currentGameState !== GAME_STATE.PLAYING || !isPaddleDragging) return;
+        e.preventDefault(); // Prevent scrolling while dragging
+
+        const touch = e.touches[0];
+        const rect = gameArea.getBoundingClientRect();
+        const scale = currentGameScale || 1;
+
+        let touchXInGame = (touch.clientX - rect.left) / scale;
+        let newPaddleX = touchXInGame - (paddle.width / 2);
+
+        if (newPaddleX < 0) newPaddleX = 0;
+        if (newPaddleX + paddle.width > GAME_WIDTH) newPaddleX = GAME_WIDTH - paddle.width;
+        paddle.x = newPaddleX;
+
+        if (!ballLaunched && balls.length > 0 && balls[0]) {
+            balls[0].x = paddle.x + paddle.width / 2;
+        }
+    }, { passive: false }); // passive: false needed for preventDefault
+
+    // Touch End / Cancel
+    function handleTouchEnd() {
+        if (isPaddleDragging) {
+            isPaddleDragging = false;
+        }
+    }
+    gameArea.addEventListener('touchend', handleTouchEnd);
+    gameArea.addEventListener('touchcancel', handleTouchEnd);
+
+    function resizeGameArea() {
+        const gameContainer = document.getElementById('game-container');
+        const gameArea = document.getElementById('game-area');
+
+        // Set gameArea base dimensions (unscaled) and transform origin for scaling
+        gameArea.style.width = GAME_WIDTH + 'px';
+        gameArea.style.height = GAME_HEIGHT + 'px';
+        gameArea.style.transformOrigin = 'top left';
+
+        let viewportWidth = window.innerWidth;
+        let viewportHeight = window.innerHeight;
+
+        // Use global currentGameScale, update it here
+        // let newContainerWidth;
+        // let newContainerHeight;
+
+        let calculatedContainerWidth; // Renamed to avoid confusion before assignment
+        let calculatedContainerHeight; // Renamed to avoid confusion before assignment
+
+        if (viewportWidth >= 1024) {
+            calculatedContainerWidth = GAME_WIDTH; // Game renders at its native 600px width
+            calculatedContainerHeight = GAME_HEIGHT; // Game renders at its native 450px height
+            currentGameScale = 1; // No scaling
+        } else {
+            // Scale to fit viewport width (with some padding), respecting aspect ratio
+            calculatedContainerWidth = viewportWidth * 0.98; // Use 98% of viewport width
+            calculatedContainerHeight = calculatedContainerWidth / ASPECT_RATIO;
+
+            // If that makes it too tall, scale to fit viewport height instead (98% of viewport height)
+            if (calculatedContainerHeight > viewportHeight * 0.98) {
+                calculatedContainerHeight = viewportHeight * 0.98;
+                calculatedContainerWidth = calculatedContainerHeight * ASPECT_RATIO; // Corrected: was / ASPECT_RATIO
+            }
+            currentGameScale = calculatedContainerWidth / GAME_WIDTH; // Calculate scale based on the new width vs original
+        }
+
+        gameContainer.style.width = calculatedContainerWidth + 'px';
+        gameContainer.style.height = calculatedContainerHeight + 'px';
+        gameArea.style.transform = 'scale(' + currentGameScale + ')';
+    }
+
     function init() {
-        setupGameContainer();
         score = 0; lives = 3;
         scoreDisplay.textContent = score; livesDisplay.textContent = lives;
 
@@ -476,10 +596,27 @@ document.addEventListener('DOMContentLoaded', () => {
     function initialPageLoadSetup() {
         currentGameState = GAME_STATE.MENU;
         showScreen(startScreen);
+        resizeGameArea(); // Call resizeGameArea
+        window.addEventListener('resize', resizeGameArea); // Add resize listener
+
+        checkOrientation(); // Call it once on load for orientation
+        window.addEventListener('resize', checkOrientation); // And on resize/orientation change for orientation
+
         update();
         if (bgmMusic) {
             bgmMusic.pause();
             // bgmMusic.currentTime = 0; // Optional: rewind BGM
+        }
+    }
+
+    function checkOrientation() {
+        const orientationMessage = document.getElementById('orientation-message');
+        if (!orientationMessage) return;
+
+        if (window.matchMedia("(orientation: portrait)").matches) {
+            orientationMessage.style.display = 'flex';
+        } else {
+            orientationMessage.style.display = 'none';
         }
     }
 

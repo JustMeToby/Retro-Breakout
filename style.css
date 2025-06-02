@@ -13,7 +13,6 @@ body {
     border: 2px solid #fff;
     /* Fixed aspect ratio (e.g., 4:3). Width will be set by JS, height calculated. */
     /* For now, let's set a placeholder size. JS will override. */
-    width: 600px;
     background-color: #000;
     display: flex;
     flex-direction: column;
@@ -48,7 +47,6 @@ body {
     overflow: hidden; /* Keep elements within bounds */
     background-color: #000; /* Game background */
     /* Placeholder height, JS will adjust */
-    height: 450px;
 }
 
 /* Basic styling for game elements - SVGs are now used and styled inline via JS */
