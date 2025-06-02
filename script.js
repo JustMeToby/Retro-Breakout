@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Button elements
     const startNewGameBtn = document.getElementById('start-new-game-btn');
+    const resumeGameBtn = document.getElementById('resume-game-btn'); // Added for Phase 5
     const nextLevelBtn = document.getElementById('next-level-btn');
     const playAgainBtn = document.getElementById('play-again-btn');
 
@@ -19,6 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const levelClearedTitle = document.getElementById('level-cleared-title');
     const gameOverMainTitle = document.getElementById('game-over-main-title');
     const finalScoreDisplay = document.getElementById('final-score');
+
+    // High Score UI Elements (Phase 5)
+    const highScoreStartScreenContainer = document.getElementById('high-scores-start-screen');
+    const highScoreGameOverContainer = document.getElementById('high-scores-game-over-screen');
+    const initialsInputContainer = document.getElementById('initials-input-container');
+    const playerInitialsInput = document.getElementById('player-initials-input');
+    const submitInitialsBtn = document.getElementById('submit-initials-btn');
 
     // Audio elements
     const sfxPaddleHit = document.getElementById('sfx-paddle-hit');
@@ -41,6 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
         PAUSED: 4
     };
     let currentGameState = GAME_STATE.MENU;
+    let saveIntervalId = null; // For saving game state
+
+    const MAX_HIGH_SCORES = 5; // Max number of high scores to store
 
     let currentLevelIndex = 0;
 
@@ -57,9 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentBaseBallSpeed_dy;
 
     let activePowerUps = {
-        slow_ball: { active: false, timerId: null, affectedBalls: [] },
-        multi_ball: { active: false, timerId: null, extraBalls: [] },
-        speed_ball: { active: false, timerId: null, affectedBalls: [] }
+        slow_ball: { active: false, timerId: null, affectedBalls: [], deactivationTime: 0 },
+        multi_ball: { active: false, timerId: null, extraBalls: [], deactivationTime: 0 },
+        speed_ball: { active: false, timerId: null, affectedBalls: [], deactivationTime: 0 }
     };
 
     const brickTypeMapping = {
@@ -304,6 +315,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleGameOver(message = "Game Over!") {
+        if (saveIntervalId !== null) {
+            clearInterval(saveIntervalId);
+            saveIntervalId = null;
+        }
         playSound(sfxGameOver);
         if (bgmMusic) {
             bgmMusic.pause();
@@ -311,78 +326,382 @@ document.addEventListener('DOMContentLoaded', () => {
         currentGameState = GAME_STATE.GAME_OVER;
         deactivateAllPowerUps(true);
         gameOverMainTitle.textContent = message;
-        finalScoreDisplay.textContent = score;
-        showScreen(gameOverScreen);
+        finalScoreDisplay.textContent = score; // Ensure final score is displayed
+
+        // High score logic
+        if (initialsInputContainer) initialsInputContainer.style.display = 'none'; // Hide by default
+        if (highScoreGameOverContainer) highScoreGameOverContainer.style.display = 'block'; // Show by default
+
+        const highScores = getHighScores();
+        const lowestHighScore = highScores.length < MAX_HIGH_SCORES ? 0 : highScores[MAX_HIGH_SCORES - 1].score;
+
+        if (score > lowestHighScore) {
+            if (initialsInputContainer) initialsInputContainer.style.display = 'flex'; // Or 'block'
+            if (highScoreGameOverContainer) highScoreGameOverContainer.style.display = 'none'; // Hide list while entering
+            if (playerInitialsInput) playerInitialsInput.focus(); // Focus on input field
+        } else {
+            displayHighScores('high-scores-game-over-screen', "High Scores");
+        }
+
+        showScreen(gameOverScreen); // Ensure game over screen is visible
     }
 
-    function updatePowerUpDisplay() { /* ... same as before ... */
+    // --- High Score Functions ---
+    function getHighScores() {
+        const scoresJSON = localStorage.getItem('breakout_high_scores');
+        try {
+            return scoresJSON ? JSON.parse(scoresJSON) : [];
+        } catch (e) {
+            console.error("Error parsing high scores", e);
+            return [];
+        }
+    }
+
+    function saveHighScores(scoresArray) {
+        try {
+            localStorage.setItem('breakout_high_scores', JSON.stringify(scoresArray));
+        } catch (e) {
+            console.error("Error saving high scores", e);
+        }
+    }
+
+    function addHighScore(name, scoreValue) {
+        const scores = getHighScores();
+        scores.push({ name, score: scoreValue });
+        scores.sort((a, b) => b.score - a.score); // Sort descending by score
+        const newScores = scores.slice(0, MAX_HIGH_SCORES);
+        saveHighScores(newScores);
+    }
+
+    function displayHighScores(containerElementId, title) {
+        const container = document.getElementById(containerElementId);
+        if (!container) {
+            // console.warn(`High score container '${containerElementId}' not found.`);
+            return;
+        }
+        const scores = getHighScores();
+        let html = `<h2 class="vt323-font">${title}</h2>`; // Ensure title has the font class
+        if (scores.length === 0) {
+            html += '<p>No high scores yet!</p>';
+        } else {
+            html += '<ol>';
+            scores.forEach(s => {
+                // Ensure list items also inherit or have the font class if needed (CSS should handle)
+                html += `<li>${s.name}: ${s.score}</li>`;
+            });
+            html += '</ol>';
+        }
+        container.innerHTML = html;
+        container.style.display = 'block'; // Make sure it's visible
+    }
+    // --- End High Score Functions ---
+
+
+    function saveGameState() {
+        try {
+            const simplifiedBalls = balls.map(ball => ({
+                x: ball.x,
+                y: ball.y,
+                dx: ball.dx,
+                dy: ball.dy,
+                id: ball.id
+            }));
+
+            const powerUpsToSave = {};
+            for (const type in activePowerUps) {
+                const pu = activePowerUps[type];
+                let remainingDuration = 0;
+                if (pu.active && pu.deactivationTime) {
+                    remainingDuration = Math.max(0, pu.deactivationTime - Date.now());
+                }
+                powerUpsToSave[type] = {
+                    active: pu.active,
+                    remainingDuration: remainingDuration,
+                    // For multi_ball, save IDs of extra balls
+                    extraBalls: type === 'multi_ball' ? pu.extraBalls.map(b => b.id) : undefined,
+                    // For slow_ball and speed_ball, save IDs of affected balls
+                    affectedBalls: (type === 'slow_ball' || type === 'speed_ball') ? pu.affectedBalls.map(b => b.id) : undefined
+                };
+            }
+
+            const gameStateData = {
+                currentLevelIndex,
+                score,
+                lives,
+                currentBaseBallSpeed_dx,
+                currentBaseBallSpeed_dy,
+                balls: simplifiedBalls,
+                ballLaunched,
+                activePowerUps: powerUpsToSave,
+                // Add paddle state if necessary, e.g. paddle.x
+                paddleX: paddle.x
+            };
+            localStorage.setItem('breakout_saved_state', JSON.stringify(gameStateData));
+            // console.log("Game state saved:", gameStateData);
+        } catch (error) {
+            console.error("Error saving game state:", error);
+        }
+    }
+
+    function updatePowerUpDisplay() {
         if (!powerUpStatusDisplay) return; let statusText = [];
         if (activePowerUps.slow_ball.active) statusText.push("Slow Ball");
-        if (activePowerUps.multi_ball.active) statusText.push("Multi-Ball");
+        if (activePowerUps.multi_ball.active) statusText.push("Multi-Ball (" + activePowerUps.multi_ball.extraBalls.length + " extra)");
         if (activePowerUps.speed_ball.active) statusText.push("Speed Ball");
         powerUpStatusDisplay.textContent = statusText.length > 0 ? statusText.join(' | ') + " Active!" : "";
     }
-    function activatePowerUp(type, currentHitBall) { /* ... same as before ... */
-        console.log(`Power-up ${type} activated!`);
+
+    function activatePowerUp(type, currentHitBall, options = {}) {
+        const { remainingDuration = null, resumingBallIds = null, isResumingMultiBall = false } = options;
+        // console.log(`Power-up ${type} activated! Options:`, options);
+
         playSound(sfxPowerupActivate);
+        const powerUp = activePowerUps[type];
+        if (powerUp && powerUp.timerId) {
+            clearTimeout(powerUp.timerId);
+            powerUp.timerId = null;
+        }
+
         switch (type) {
-            case 'life': lives++; livesDisplay.textContent = lives; break;
+            case 'life':
+                lives++;
+                livesDisplay.textContent = lives;
+                break;
             case 'slow_ball':
-                if (activePowerUps.slow_ball.timerId) clearTimeout(activePowerUps.slow_ball.timerId);
-                if (activePowerUps.speed_ball.affectedBalls.includes(currentHitBall)) deactivatePowerUp('speed_ball', currentHitBall, true);
-                activePowerUps.slow_ball.affectedBalls.push(currentHitBall); currentHitBall.dx *= 0.5; currentHitBall.dy *= 0.5;
-                if (Math.abs(currentHitBall.dx) < 1 && currentHitBall.dx !== 0) currentHitBall.dx = Math.sign(currentHitBall.dx) * 1;
-                if (Math.abs(currentHitBall.dy) < 1 && currentHitBall.dy !== 0) currentHitBall.dy = Math.sign(currentHitBall.dy) * 1;
-                activePowerUps.slow_ball.active = true;
-                activePowerUps.slow_ball.timerId = setTimeout(() => deactivatePowerUp('slow_ball', currentHitBall), SLOW_BALL_DURATION);
-                break;
-            case 'multi_ball':
-                if (activePowerUps.multi_ball.timerId) clearTimeout(activePowerUps.multi_ball.timerId);
-                activePowerUps.multi_ball.active = true; const ballsToAdd = MAX_BALLS - balls.length;
-                for (let i = 0; i < ballsToAdd; i++) { if (balls.length >= MAX_BALLS) break;
-                    const newBall = createNewBall(paddle.x + paddle.width / 2, paddle.y - BALL_RADIUS - 20,
-                        currentBaseBallSpeed_dx * (Math.random()>0.5?1:-1) * (0.8+Math.random()*0.4),
-                        currentBaseBallSpeed_dy * (0.8+Math.random()*0.4), `extra${balls.length}_${Date.now()}`);
-                    balls.push(newBall); gameArea.appendChild(newBall.element); activePowerUps.multi_ball.extraBalls.push(newBall);
-                }
-                activePowerUps.multi_ball.timerId = setTimeout(() => deactivatePowerUp('multi_ball'), MULTI_BALL_DURATION);
-                break;
             case 'speed_ball':
-                if (activePowerUps.speed_ball.timerId) clearTimeout(activePowerUps.speed_ball.timerId);
-                if (activePowerUps.slow_ball.affectedBalls.includes(currentHitBall)) deactivatePowerUp('slow_ball', currentHitBall, true);
-                activePowerUps.speed_ball.affectedBalls.push(currentHitBall); currentHitBall.dx *= 1.5; currentHitBall.dy *= 1.5;
-                activePowerUps.speed_ball.active = true;
-                activePowerUps.speed_ball.timerId = setTimeout(() => deactivatePowerUp('speed_ball', currentHitBall), SPEED_BALL_DURATION);
+                const isSlow = type === 'slow_ball';
+                const speedFactor = isSlow ? 0.5 : 1.5;
+                const duration = remainingDuration !== null && remainingDuration > 0 ? remainingDuration : (isSlow ? SLOW_BALL_DURATION : SPEED_BALL_DURATION);
+
+                powerUp.active = true;
+                powerUp.affectedBalls = []; // Clear previous list
+                powerUp.deactivationTime = Date.now() + duration;
+
+                const ballsToAffect = [];
+                if (resumingBallIds && resumingBallIds.length > 0) {
+                    resumingBallIds.forEach(ballId => {
+                        const ball = balls.find(b => b.id === ballId);
+                        if (ball) ballsToAffect.push(ball);
+                    });
+                } else if (currentHitBall) {
+                    ballsToAffect.push(currentHitBall);
+                }
+
+                ballsToAffect.forEach(ballInstance => {
+                    // Deactivate conflicting power-up on the same ball
+                    if (isSlow && activePowerUps.speed_ball.affectedBalls.includes(ballInstance)) {
+                         deactivatePowerUp('speed_ball', ballInstance, true); // isResetContext true to prevent speed normalization if it's about to be slowed
+                    } else if (!isSlow && activePowerUps.slow_ball.affectedBalls.includes(ballInstance)) {
+                         deactivatePowerUp('slow_ball', ballInstance, true); // isResetContext true
+                    }
+
+                    // Only apply speed change if not already affected by the same type or if resuming
+                    if (!powerUp.affectedBalls.includes(ballInstance) || (resumingBallIds && resumingBallIds.includes(ballInstance.id))) {
+                        ballInstance.dx *= speedFactor;
+                        ballInstance.dy *= speedFactor;
+                        // Prevent ball from becoming too slow
+                        if (isSlow) {
+                            if (Math.abs(ballInstance.dx) < 1 && ballInstance.dx !== 0) ballInstance.dx = Math.sign(ballInstance.dx) * 1;
+                            if (Math.abs(ballInstance.dy) < 1 && ballInstance.dy !== 0) ballInstance.dy = Math.sign(ballInstance.dy) * 1;
+                        }
+                        powerUp.affectedBalls.push(ballInstance);
+                    }
+                });
+
+                powerUp.timerId = setTimeout(() => deactivatePowerUp(type), duration);
                 break;
-        } updatePowerUpDisplay();
+
+            case 'multi_ball':
+                powerUp.active = true;
+                const multiDuration = remainingDuration !== null && remainingDuration > 0 ? remainingDuration : MULTI_BALL_DURATION;
+                powerUp.deactivationTime = Date.now() + multiDuration;
+                powerUp.extraBalls = []; // Reset extraBalls array
+
+                if (isResumingMultiBall && resumingBallIds && resumingBallIds.length > 0) {
+                    // Resuming: find existing balls by ID and add to extraBalls list
+                    resumingBallIds.forEach(ballId => {
+                        const ball = balls.find(b => b.id === ballId);
+                        if (ball) { // Ball should have been created by loadGameState general ball loop
+                            powerUp.extraBalls.push(ball);
+                        }
+                    });
+                } else if (!isResumingMultiBall) {
+                    // Not resuming: create new balls
+                    const ballsToAdd = MAX_BALLS - balls.length;
+                    for (let i = 0; i < ballsToAdd; i++) {
+                        if (balls.length >= MAX_BALLS) break;
+                        const newBall = createNewBall(
+                            paddle.x + paddle.width / 2,
+                            paddle.y - BALL_RADIUS - 20, // شويه فوق المجداف
+                            currentBaseBallSpeed_dx * (Math.random() > 0.5 ? 1 : -1) * (0.8 + Math.random() * 0.4),
+                            currentBaseBallSpeed_dy * (0.8 + Math.random() * 0.4),
+                            `extra${balls.length}_${Date.now()}`
+                        );
+                        balls.push(newBall); // Add to global balls array
+                        gameArea.appendChild(newBall.element);
+                        powerUp.extraBalls.push(newBall); // Add to this power-up's list
+                    }
+                }
+                powerUp.timerId = setTimeout(() => deactivatePowerUp(type), multiDuration);
+                break;
+        }
+        updatePowerUpDisplay();
     }
-    function deactivatePowerUp(type, ballRef, isResetCtx = false) { /* ... same as before, but ensure ballRef is used if not null for slow/speed ... */
-        console.log(`Power-up ${type} deactivated.`);
+
+    function deactivatePowerUp(type, ballRef, isResetCtx = false) {
+        // console.log(`Power-up ${type} deactivated. BallRef: ${ballRef ? ballRef.id : 'N/A'}, isResetCtx: ${isResetCtx}`);
         playSound(sfxPowerupDeactivate);
+        playSound(sfxPowerupDeactivate);
+        const powerUp = activePowerUps[type];
+        if (!powerUp || !powerUp.active) return;
+
+        if (powerUp.timerId) {
+            clearTimeout(powerUp.timerId);
+            powerUp.timerId = null;
+        }
+        powerUp.active = false;
+
         switch (type) {
             case 'slow_ball':
-                if (activePowerUps.slow_ball.timerId) { clearTimeout(activePowerUps.slow_ball.timerId); activePowerUps.slow_ball.timerId = null; }
-                activePowerUps.slow_ball.affectedBalls.forEach(b => { if (!isResetCtx && b) { b.dx = Math.sign(b.dx) * currentBaseBallSpeed_dx; b.dy = Math.sign(b.dy) * Math.abs(currentBaseBallSpeed_dy); }});
-                activePowerUps.slow_ball.active = false; activePowerUps.slow_ball.affectedBalls = []; break;
-            case 'multi_ball':
-                if (activePowerUps.multi_ball.timerId) { clearTimeout(activePowerUps.multi_ball.timerId); activePowerUps.multi_ball.timerId = null; }
-                activePowerUps.multi_ball.extraBalls.forEach(exBall => { const i = balls.indexOf(exBall); if (i > -1) { balls.splice(i, 1); if (exBall.element) exBall.element.remove(); }});
-                if (balls.length === 0 && !isResetCtx && gameRunning) { /* ... respawn logic ... */
-                    balls.push(createNewBall(paddle.x + paddle.width/2, paddle.y - BALL_RADIUS - 1, INITIAL_BALL_SPEED_DX, INITIAL_BALL_SPEED_DY, `main_${Date.now()}`));
-                    gameArea.appendChild(balls[0].element);
-                }
-                activePowerUps.multi_ball.active = false; activePowerUps.multi_ball.extraBalls = []; break;
             case 'speed_ball':
-                if (activePowerUps.speed_ball.timerId) { clearTimeout(activePowerUps.speed_ball.timerId); activePowerUps.speed_ball.timerId = null; }
-                activePowerUps.speed_ball.affectedBalls.forEach(b => { if (!isResetCtx && b) { b.dx = Math.sign(b.dx) * currentBaseBallSpeed_dx; b.dy = Math.sign(b.dy) * Math.abs(currentBaseBallSpeed_dy); }});
-                activePowerUps.speed_ball.active = false; activePowerUps.speed_ball.affectedBalls = []; break;
-        } updatePowerUpDisplay();
+                const ballsToNormalize = ballRef ? [ballRef] : [...powerUp.affectedBalls];
+                ballsToNormalize.forEach(b => {
+                    if (b) { // Check if ball b exists
+                        // Only normalize if not in reset context or if it's the specific ball being deactivated
+                        // This prevents double normalization if another powerup is still active on it.
+                        const otherSpeedPowerUp = type === 'slow_ball' ? activePowerUps.speed_ball : activePowerUps.slow_ball;
+                        if (!isResetCtx && !otherSpeedPowerUp.active) {
+                             // Check if the ball instance b is actually in the list of otherSpeedPowerUp.affectedBalls
+                            let isAffectedByOther = false;
+                            if (otherSpeedPowerUp.affectedBalls && Array.isArray(otherSpeedPowerUp.affectedBalls)) {
+                                isAffectedByOther = otherSpeedPowerUp.affectedBalls.includes(b);
+                            }
+
+                            if(!isAffectedByOther) {
+                                b.dx = Math.sign(b.dx) * currentBaseBallSpeed_dx;
+                                b.dy = Math.sign(b.dy) * Math.abs(currentBaseBallSpeed_dy);
+                            }
+                        }
+                         // Remove from affected list
+                        const index = powerUp.affectedBalls.indexOf(b);
+                        if (index > -1) {
+                            powerUp.affectedBalls.splice(index, 1);
+                        }
+                    }
+                });
+                // If ballRef was specified and it's the last one, clear the main list too.
+                if (ballRef && powerUp.affectedBalls.length === 0) {
+                     powerUp.affectedBalls = [];
+                } else if (!ballRef) { // Full deactivation for this powerup type
+                     powerUp.affectedBalls = [];
+                }
+                break;
+            case 'multi_ball':
+                // Remove only extra balls associated with this power-up
+                powerUp.extraBalls.forEach(exBall => {
+                    const i = balls.indexOf(exBall);
+                    if (i > -1) {
+                        balls.splice(i, 1);
+                        if (exBall.element) exBall.element.remove();
+                    }
+                });
+                powerUp.extraBalls = [];
+                if (balls.length === 0 && !isResetCtx && currentGameState === GAME_STATE.PLAYING) {
+                    // Respawn a new main ball if all balls are gone
+                    const newMainBall = createNewBall(
+                        paddle.x + paddle.width / 2, paddle.y - BALL_RADIUS - 1,
+                        currentBaseBallSpeed_dx, currentBaseBallSpeed_dy, // Use current base speed
+                        `main_${Date.now()}`
+                    );
+                    balls.push(newMainBall);
+                    gameArea.appendChild(newMainBall.element);
+                    ballLaunched = false; // Require user to launch the new ball
+                }
+                break;
+        }
+        updatePowerUpDisplay();
     }
-    function deactivateAllPowerUps(isResetCtx = true) { /* ... same as before ... */
-        if(activePowerUps.slow_ball.active) deactivatePowerUp('slow_ball', null, isResetCtx);
-        if(activePowerUps.multi_ball.active) deactivatePowerUp('multi_ball', null, isResetCtx);
-        if(activePowerUps.speed_ball.active) deactivatePowerUp('speed_ball', null, isResetCtx);
+
+    function deactivateAllPowerUps(isResetCtx = true) {
+        // Iterate over a copy of keys if deactivation modifies the activePowerUps structure or array
+        const powerUpTypes = Object.keys(activePowerUps);
+        powerUpTypes.forEach(type => {
+            if (activePowerUps[type].active) {
+                // For slow_ball and speed_ball, pass null for ballRef to reset all affected balls
+                deactivatePowerUp(type, null, isResetCtx);
+            }
+        });
     }
+
+
+    // Game State Loading
+    function loadGameState() {
+        const savedStateJSON = localStorage.getItem('breakout_saved_state');
+        if (!savedStateJSON) {
+            console.log("No saved game state found.");
+            return false;
+        }
+
+        try {
+            const savedState = JSON.parse(savedStateJSON);
+
+            currentLevelIndex = savedState.currentLevelIndex;
+            score = savedState.score;
+            lives = savedState.lives;
+            currentBaseBallSpeed_dx = savedState.currentBaseBallSpeed_dx;
+            currentBaseBallSpeed_dy = savedState.currentBaseBallSpeed_dy;
+            paddle.x = savedState.paddleX !== undefined ? savedState.paddleX : GAME_WIDTH / 2 - PADDLE_WIDTH / 2;
+            ballLaunched = savedState.ballLaunched;
+
+            // Restore Balls
+            balls.forEach(b => { if (b.element) b.element.remove(); });
+            balls = [];
+            savedState.balls.forEach(sBall => {
+                const newBall = createNewBall(sBall.x, sBall.y, sBall.dx, sBall.dy, sBall.id);
+                // newBall.id = sBall.id; // createNewBall already sets id if suffix is sBall.id itself
+                balls.push(newBall);
+                if (newBall.element && !newBall.element.parentElement) { // Ensure not already added
+                    gameArea.appendChild(newBall.element);
+                }
+            });
+
+            loadLevel(currentLevelIndex); // Load bricks for the current level
+
+            deactivateAllPowerUps(true); // Reset current power-ups before loading saved ones
+
+            if (savedState.activePowerUps) {
+                for (const type in savedState.activePowerUps) {
+                    const puState = savedState.activePowerUps[type];
+                    if (puState.active && puState.remainingDuration > 0) {
+                        let options = { remainingDuration: puState.remainingDuration };
+                        if (type === 'multi_ball') {
+                            options.resumingBallIds = puState.extraBalls; // These are IDs
+                            options.isResumingMultiBall = true;
+                            activatePowerUp(type, null, options);
+                        } else if (type === 'slow_ball' || type === 'speed_ball') {
+                            options.resumingBallIds = puState.affectedBalls; // These are IDs
+                            activatePowerUp(type, null, options);
+                        }
+                    }
+                }
+            }
+
+            scoreDisplay.textContent = score;
+            livesDisplay.textContent = lives;
+            drawPaddle();
+            drawBalls(); // Ensure balls are drawn after creation and potential power-up effects
+            updatePowerUpDisplay();
+
+            console.log("Game state loaded successfully.");
+            return true;
+
+        } catch (error) {
+            console.error("Error loading game state:", error);
+            localStorage.removeItem('breakout_saved_state'); // Clear corrupted data
+            return false;
+        }
+    }
+
 
     document.addEventListener('keydown', (e) => { /* ... guarded ... */
         if (currentGameState !== GAME_STATE.PLAYING) return;
@@ -568,15 +887,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     startNewGameBtn.addEventListener('click', () => {
+        localStorage.removeItem('breakout_saved_state');
+        if (resumeGameBtn) resumeGameBtn.style.display = 'none';
+
         showGameElements();
         currentGameState = GAME_STATE.PLAYING;
-        init();
+        init(); // init should reset game state variables
+        if (saveIntervalId !== null) clearInterval(saveIntervalId);
+        saveIntervalId = setInterval(saveGameState, 1000);
         if (!isMuted && bgmMusic && bgmMusic.paused) {
             bgmMusic.play().catch(error => console.warn("Error starting BGM:", error));
         } else if (bgmMusic) {
             bgmMusic.muted = isMuted; // Ensure mute state is respected
         }
     });
+
+    if (resumeGameBtn) {
+        resumeGameBtn.addEventListener('click', () => {
+            if (loadGameState()) {
+                showGameElements();
+                currentGameState = GAME_STATE.PLAYING;
+                // BGM
+                if (!isMuted && bgmMusic && bgmMusic.paused) {
+                    bgmMusic.play().catch(error => console.warn("Error resuming BGM:", error));
+                } else if (bgmMusic) {
+                    bgmMusic.muted = isMuted;
+                }
+                // Save interval
+                if (saveIntervalId !== null) clearInterval(saveIntervalId);
+                saveIntervalId = setInterval(saveGameState, 1000);
+
+                // Hide start screen or just the button
+                if(startScreen) startScreen.style.display = 'none';
+                // resumeGameBtn.style.display = 'none'; // Or just hide the button
+            } else {
+                // Failed to load, perhaps clear broken save and encourage new game
+                localStorage.removeItem('breakout_saved_state');
+                if (resumeGameBtn) resumeGameBtn.style.display = 'none';
+                alert("Could not resume game. Starting a new game.");
+                startNewGameBtn.click(); // Simulate click on new game
+            }
+        });
+    }
 
     nextLevelBtn.addEventListener('click', () => {
         currentLevelIndex++;
@@ -590,6 +942,8 @@ document.addEventListener('DOMContentLoaded', () => {
         balls.push(newPrimaryBall); if(newPrimaryBall.element && newPrimaryBall.element.parentElement !== gameArea) gameArea.appendChild(newPrimaryBall.element);
         loadLevel(currentLevelIndex);
         currentGameState = GAME_STATE.PLAYING;
+        if (saveIntervalId !== null) clearInterval(saveIntervalId);
+        saveIntervalId = setInterval(saveGameState, 1000);
         if (!isMuted && bgmMusic && bgmMusic.paused) { // If it was somehow paused
             bgmMusic.play().catch(error => console.warn("Error continuing BGM:", error));
         } else if (bgmMusic) {
@@ -598,9 +952,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     playAgainBtn.addEventListener('click', () => {
+        // For 'Play Again', treat as a new game regarding save state.
+        // If there was an old save interval (e.g., from a game over that wasn't fully cleaned up), clear it.
+        if (saveIntervalId !== null) clearInterval(saveIntervalId);
+        localStorage.removeItem('breakout_saved_state'); // Clear any previous saved state on "Play Again"
+
         showGameElements();
         currentGameState = GAME_STATE.PLAYING;
         init();
+        saveIntervalId = setInterval(saveGameState, 1000); // Start new save interval
         if (!isMuted && bgmMusic && bgmMusic.paused) {
             bgmMusic.play().catch(error => console.warn("Error starting BGM:", error));
         } else if (bgmMusic) {
@@ -610,6 +970,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initialPageLoadSetup() {
         currentGameState = GAME_STATE.MENU;
+        if (saveIntervalId !== null) {
+            clearInterval(saveIntervalId);
+            saveIntervalId = null;
+        }
+
+        const savedGameData = localStorage.getItem('breakout_saved_state');
+        if (savedGameData && resumeGameBtn) {
+            try {
+                JSON.parse(savedGameData);
+                resumeGameBtn.style.display = 'inline-block';
+            } catch (e) {
+                console.warn("Invalid saved data found, removing.");
+                localStorage.removeItem('breakout_saved_state');
+                if (resumeGameBtn) resumeGameBtn.style.display = 'none';
+            }
+        } else if (resumeGameBtn) {
+            resumeGameBtn.style.display = 'none';
+        }
+
+        displayHighScores('high-scores-start-screen', "Top Scores");
+
         showScreen(startScreen);
         resizeGameArea(); // Call resizeGameArea
         window.addEventListener('resize', resizeGameArea); // Add resize listener
@@ -636,6 +1017,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initialPageLoadSetup();
+
+    // Event listener for submit initials button (Phase 5)
+    if (submitInitialsBtn && playerInitialsInput && initialsInputContainer && highScoreGameOverContainer) {
+        submitInitialsBtn.addEventListener('click', () => {
+            let initials = playerInitialsInput.value.trim().toUpperCase().slice(0, 3);
+            if (initials.length === 0) {
+                initials = "AAA"; // Default if empty
+            }
+            // 'score' is globally available here from the game instance when game over happened
+            addHighScore(initials, score);
+
+            initialsInputContainer.style.display = 'none';
+            playerInitialsInput.value = ''; // Clear the input field
+
+            highScoreGameOverContainer.style.display = 'block';
+            displayHighScores('high-scores-game-over-screen', "High Scores");
+        });
+    }
+
 
     // --- Audio Management ---
     function playSound(soundElement) {

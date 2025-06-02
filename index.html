@@ -24,7 +24,10 @@
         <div id="start-screen" class="game-screen vt323-font">
             <h1>Retro Breakout</h1>
             <button id="start-new-game-btn">Start New Game</button>
-            <!-- "Resume Game" button will be for Phase 5 -->
+            <button id="resume-game-btn" class="hidden">Resume Game</button>
+            <div id="high-scores-start-screen">
+                <!-- High scores will be displayed here -->
+            </div>
         </div>
 
         <div id="level-cleared-screen" class="game-screen vt323-font" style="display: none;">
@@ -36,8 +39,14 @@
         <div id="game-over-screen" class="game-screen vt323-font" style="display: none;">
             <h2 id="game-over-main-title">Game Over!</h2> <!-- Changed ID for clarity -->
             <p>Final Score: <span id="final-score">0</span></p>
+            <div id="initials-input-container" class="hidden">
+                <input type="text" id="player-initials-input" maxlength="3" placeholder="Enter Initials">
+                <button id="submit-initials-btn">Submit Score</button>
+            </div>
             <button id="play-again-btn">Play Again</button>
-            <!-- High scores display will be for Phase 5 -->
+            <div id="high-scores-game-over-screen">
+                <!-- High scores will be displayed here -->
+            </div>
         </div>
 
         <div id="orientation-message" class="game-screen vt323-font" style="display: none; z-index: 20;">
