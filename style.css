@@ -32,6 +32,16 @@ body {
     padding: 5px;
 }
 
+#powerup-status {
+    font-family: 'VT323', monospace; /* Ensure font, though inherited */
+    color: #0f0; /* Green text */
+    text-align: center;
+    padding: 5px 0;
+    min-height: 20px; /* So it doesn't collapse game layout when empty */
+    font-size: 18px;
+    border-bottom: 1px dashed #555; /* Optional: visual separator */
+}
+
 #game-area {
     /* Height will be determined by JS based on aspect ratio */
     position: relative; /* For positioning game elements */
@@ -41,38 +51,96 @@ body {
     height: 450px;
 }
 
-/* Basic styling for game elements - these will be refined further with SVG */
+/* Basic styling for game elements - SVGs are now used and styled inline via JS */
+/*
 .paddle {
-    background-color: #0f0; /* Green paddle */
+    background-color: #0f0;
     position: absolute;
-    /* Dimensions will be set by JS */
 }
 
 .ball {
-    background-color: #f00; /* Red ball */
-    border-radius: 50%; /* Make it round */
+    background-color: #f00;
+    border-radius: 50%;
     position: absolute;
-    /* Dimensions will be set by JS */
 }
 
 .brick {
-    background-color: #00f; /* Blue bricks */
+    background-color: #00f;
     position: absolute;
-    border: 1px solid #333; /* Slight border for bricks */
-    /* Dimensions will be set by JS */
+    border: 1px solid #333;
+}
+*/
+
+/* Ensure game container and children use the pixel font */
+#game-container, #game-container * { /* Applied broadly */
+    font-family: 'VT323', monospace;
 }
 
+/* Old #game-over-message is replaced by #game-over-screen, so remove or comment out */
+/*
 #game-over-message {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 48px;
-    color: #ff0; /* Yellow game over text */
+    color: #ff0;
     text-align: center;
     padding: 20px;
     background-color: rgba(0,0,0,0.7);
     border-radius: 10px;
+}
+*/
+
+.game-screen {
+    position: absolute; /* Cover the game-container or game-area */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* Semi-transparent overlay */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 10; /* Ensure screens are on top */
+    color: #fff; /* Default text color for screens */
+}
+
+.game-screen h1 {
+    font-size: 48px;
+    margin-bottom: 30px; /* Increased margin */
+    color: #0f0; /* Green for main title */
+}
+.game-screen h2 {
+    font-size: 36px;
+    margin-bottom: 20px; /* Increased margin */
+    color: #ff0; /* Yellow for subtitles */
+}
+.game-screen p {
+    font-size: 24px;
+    margin-bottom: 25px; /* Increased margin */
+}
+.game-screen button {
+    font-family: 'VT323', monospace; /* Ensure font on button */
+    font-size: 24px;
+    padding: 10px 20px;
+    background-color: #0f0; /* Green button */
+    color: #000; /* Black text on button */
+    border: 2px solid #fff;
+    box-shadow: 0 0 5px #fff; /* Subtle glow */
+    cursor: pointer;
+    margin-top: 10px;
+    text-transform: uppercase; /* Optional: for style */
+}
+.game-screen button:hover {
+    background-color: #0c0; /* Darker green on hover */
+    box-shadow: 0 0 10px #fff;
+}
+
+.vt323-font { /* Utility class, though #game-container * should cover most */
+    font-family: 'VT323', monospace !important;
 }
 
 /* Utility class for hidden elements */
