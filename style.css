@@ -1,0 +1,81 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #111;
+    margin: 0;
+    font-family: 'VT323', monospace;
+    color: #fff;
+}
+
+#game-container {
+    border: 2px solid #fff;
+    /* Fixed aspect ratio (e.g., 4:3). Width will be set by JS, height calculated. */
+    /* For now, let's set a placeholder size. JS will override. */
+    width: 600px;
+    background-color: #000;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 10px #fff;
+}
+
+#score-board {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    font-size: 24px;
+    border-bottom: 2px solid #fff;
+}
+
+#score-board span {
+    padding: 5px;
+}
+
+#game-area {
+    /* Height will be determined by JS based on aspect ratio */
+    position: relative; /* For positioning game elements */
+    overflow: hidden; /* Keep elements within bounds */
+    background-color: #000; /* Game background */
+    /* Placeholder height, JS will adjust */
+    height: 450px;
+}
+
+/* Basic styling for game elements - these will be refined further with SVG */
+.paddle {
+    background-color: #0f0; /* Green paddle */
+    position: absolute;
+    /* Dimensions will be set by JS */
+}
+
+.ball {
+    background-color: #f00; /* Red ball */
+    border-radius: 50%; /* Make it round */
+    position: absolute;
+    /* Dimensions will be set by JS */
+}
+
+.brick {
+    background-color: #00f; /* Blue bricks */
+    position: absolute;
+    border: 1px solid #333; /* Slight border for bricks */
+    /* Dimensions will be set by JS */
+}
+
+#game-over-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    color: #ff0; /* Yellow game over text */
+    text-align: center;
+    padding: 20px;
+    background-color: rgba(0,0,0,0.7);
+    border-radius: 10px;
+}
+
+/* Utility class for hidden elements */
+.hidden {
+    display: none !important;
+}
