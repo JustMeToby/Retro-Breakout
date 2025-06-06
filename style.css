@@ -73,15 +73,29 @@ body {
 
 /* Brick type and HP styles */
 .brick-single {
-    background-color: #00BFFF; 
-    background-image: url(img/onehit.png);
-    background-size: 400%;
+    background-image: url(img/onehit.png); 
+    box-shadow: inset 0px 0px 3px rgba(0,0,0,0.9);
 }
-.brick-double.hp-2 { background-color: #FFFF00; }
-.brick-double.hp-1 { background-color: #00BFFF; }
-.brick-triple.hp-3 { background-color: #00FF00; }
-.brick-triple.hp-2 { background-color: #9ACD32; }
-.brick-triple.hp-1 { background-color: #FFFF00; }
+.brick-double.hp-2 { 
+    background-image: url(img/twohit.png); 
+    box-shadow: inset 0px 0px 3px rgba(0,0,0,0.9);
+}
+.brick-double.hp-1 {
+    background-image: url(img/onehit.png); 
+    box-shadow: inset 0px 0px 3px rgba(0,0,0,0.9);
+}
+.brick-triple.hp-3 {
+    background-image: url(img/threehit.png); 
+    box-shadow: inset 0px 0px 3px rgba(0,0,0,0.9);
+}
+.brick-triple.hp-2 { 
+    background-image: url(img/twohit.png); 
+    box-shadow: inset 0px 0px 3px rgba(0,0,0,0.9);
+}
+.brick-triple.hp-1 {
+    background-image: url(img/onehit.png); 
+    box-shadow: inset 0px 0px 3px rgba(0,0,0,0.9);
+}
 .brick-unbreakable { background-color: #808080; }
 .brick-powerup { background-color: #FF00FF; }
 
