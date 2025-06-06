@@ -12,24 +12,19 @@
         <div id="score-board" style="display: none;"> <!-- Initially hidden -->
             <span>Score: <span id="score">0</span></span>
             <span>Lives: <span id="lives">3</span></span>
-            <button id="mute-btn" class="vt323-font">Mute</button>
-            <button id="pause-btn" class="vt323-font">Pause</button>
+            <button id="bgm-mute-btn" class="vt323-font">Unmute BGM</button>
+            <button id="sfx-mute-btn" class="vt323-font">Mute SFX</button>
         </div>
         <div id="powerup-status" class="vt323-font" style="display: none;"></div> <!-- Initially hidden -->
 
         <div id="game-area" style="display: none;"> <!-- Initially hidden -->
             <!-- Game elements like paddle, ball, bricks will be added here by JavaScript -->
-            <div id="paused-message" class="vt323-font" style="display: none;">Paused</div>
         </div>
 
         <!-- Screens -->
         <div id="start-screen" class="game-screen vt323-font">
             <h1>Retro Breakout</h1>
             <button id="start-new-game-btn">Start New Game</button>
-            <button id="resume-game-btn" class="hidden">Resume Game</button>
-            <div id="high-scores-start-screen">
-                <!-- High scores will be displayed here -->
-            </div>
         </div>
 
         <div id="level-cleared-screen" class="game-screen vt323-font" style="display: none;">
@@ -41,14 +36,7 @@
         <div id="game-over-screen" class="game-screen vt323-font" style="display: none;">
             <h2 id="game-over-main-title">Game Over!</h2> <!-- Changed ID for clarity -->
             <p>Final Score: <span id="final-score">0</span></p>
-            <div id="initials-input-container" class="hidden">
-                <input type="text" id="player-initials-input" maxlength="3" placeholder="Enter Initials">
-                <button id="submit-initials-btn">Submit Score</button>
-            </div>
             <button id="play-again-btn">Play Again</button>
-            <div id="high-scores-game-over-screen">
-                <!-- High scores will be displayed here -->
-            </div>
         </div>
 
         <div id="orientation-message" class="game-screen vt323-font" style="display: none; z-index: 20;">
