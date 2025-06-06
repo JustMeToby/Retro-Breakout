@@ -72,7 +72,11 @@ body {
 }
 
 /* Brick type and HP styles */
-.brick-single { background-color: #00BFFF; }
+.brick-single {
+    background-color: #00BFFF; 
+    background-image: url(img/onehit.png);
+    background-size: 400%;
+}
 .brick-double.hp-2 { background-color: #FFFF00; }
 .brick-double.hp-1 { background-color: #00BFFF; }
 .brick-triple.hp-3 { background-color: #00FF00; }
