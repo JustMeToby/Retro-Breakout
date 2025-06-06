@@ -13,8 +13,6 @@ body {
 
 #game-container {
     border: 4px solid #fff;
-    /* Fixed aspect ratio (e.g., 4:3). Width will be set by JS, height calculated. */
-    /* For now, let's set a placeholder size. JS will override. */
     background-color: #000;
     display: flex;
     flex-direction: column;
@@ -76,10 +74,10 @@ body {
 /* Brick type and HP styles */
 .brick-single { background-color: #00BFFF; }
 .brick-double.hp-2 { background-color: #FFFF00; }
-.brick-double.hp-1 { background-color: #FFA500; }
+.brick-double.hp-1 { background-color: #00BFFF; }
 .brick-triple.hp-3 { background-color: #00FF00; }
 .brick-triple.hp-2 { background-color: #9ACD32; }
-.brick-triple.hp-1 { background-color: #BDB76B; }
+.brick-triple.hp-1 { background-color: #FFFF00; }
 .brick-unbreakable { background-color: #808080; }
 .brick-powerup { background-color: #FF00FF; }
 
