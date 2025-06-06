@@ -61,8 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const SPEED_BALL_DURATION = 10000;
     const MAX_BALLS = 3;
 
-    const INITIAL_BALL_SPEED_DX = 2;
-    const INITIAL_BALL_SPEED_DY = -4;
+    // Original reference dimensions
+    const ORIGINAL_GAME_WIDTH = 600;
+    const ORIGINAL_GAME_HEIGHT = 450;
+
+    let INITIAL_BALL_SPEED_DX = 2; // Changed to let
+    let INITIAL_BALL_SPEED_DY = -4; // Changed to let
     const LEVEL_SPEED_INCREASE_FACTOR = 0.20;
 
     let currentBaseBallSpeed_dx;
@@ -91,13 +95,20 @@ document.addEventListener('DOMContentLoaded', () => {
         { layout: [['u','u',1,2,3,3,2,1,'u','u'],[0,'u',2,1,'pf','pm',1,2,'u',0],[0,0,'u',1,1,1,1,'u',0,0],[0,0,1,3,'pl','ps',3,1,0,0],[0,1,2,1,2,2,1,2,1,0],[1,2,1,0,0,0,0,1,2,1]]}
     ];
 
-    const GAME_WIDTH = 600; const GAME_HEIGHT = 450;
-    const ASPECT_RATIO = GAME_WIDTH / GAME_HEIGHT;
-    const PADDLE_WIDTH = 100; const PADDLE_HEIGHT = 15;
-    const PADDLE_Y_OFFSET = 20; const BALL_RADIUS = 8;
-    const BRICK_WIDTH = GAME_WIDTH / 10 - 4; // Assuming 10 cols for BRICK_WIDTH calc
-    const BRICK_HEIGHT = 20; const BRICK_PADDING = 2;
-    const BRICK_OFFSET_TOP = 30; const BRICK_OFFSET_LEFT = 2;
+    let GAME_WIDTH = 600; let GAME_HEIGHT = 450; // Default values, will be updated
+    // ASPECT_RATIO might need to be based on ORIGINAL_GAME_WIDTH/HEIGHT if used for scaling logic
+    // For now, its usage in BRICK_WIDTH calculation is replaced.
+    // const ASPECT_RATIO = GAME_WIDTH / GAME_HEIGHT; 
+    let PADDLE_WIDTH = 100; // Changed to let
+    let PADDLE_HEIGHT = 15; // Changed to let
+    let PADDLE_Y_OFFSET = 20; // Changed to let
+    let BALL_RADIUS = 8; // Changed to let
+    let BRICK_WIDTH = (ORIGINAL_GAME_WIDTH / 10) - 4; // Initial value based on ORIGINAL_GAME_WIDTH, changed to let
+    let BRICK_HEIGHT = 20; // Changed to let
+    let BRICK_PADDING = 2; // Changed to let
+    let BRICK_OFFSET_TOP = 30; // Changed to let
+    let BRICK_OFFSET_LEFT = 2; // Changed to let
+    let BALL_PADDLE_OFFSET = 1; // For the small gap between paddle and unlaunched ball
 
     let score = 0; let lives = 3;
     let currentGameScale = 1;
@@ -105,13 +116,79 @@ document.addEventListener('DOMContentLoaded', () => {
     let isMuted = false;
     let gameRunning = true; // Will be synced with currentGameState
     let bricks = []; let ballLaunched = false;
-    const PADDLE_SPEED = 8;
+    let PADDLE_SPEED = 8; // Changed to let
 
     const paddle = {
-        x: GAME_WIDTH / 2 - PADDLE_WIDTH / 2, y: GAME_HEIGHT - PADDLE_HEIGHT - PADDLE_Y_OFFSET,
+        // Initialize with values that would be typical for ORIGINAL_GAME_WIDTH/HEIGHT, these will be updated by updateGameElementSizesAndSpeeds
+        x: ORIGINAL_GAME_WIDTH / 2 - PADDLE_WIDTH / 2, 
+        y: ORIGINAL_GAME_HEIGHT - PADDLE_HEIGHT - PADDLE_Y_OFFSET,
         width: PADDLE_WIDTH, height: PADDLE_HEIGHT, speed: PADDLE_SPEED, moveLeft: false, moveRight: false
     };
     let paddleElement;
+
+    // New function to update game element sizes and speeds
+    function updateGameElementSizesAndSpeeds() {
+        // Paddle Dimensions
+        PADDLE_WIDTH = (100 / ORIGINAL_GAME_WIDTH) * GAME_WIDTH;
+        PADDLE_HEIGHT = (15 / ORIGINAL_GAME_HEIGHT) * GAME_HEIGHT;
+        PADDLE_Y_OFFSET = (20 / ORIGINAL_GAME_HEIGHT) * GAME_HEIGHT;
+
+        // Ball Radius - Scaled by width for consistency. 
+        // Consider Math.min(GAME_WIDTH / ORIGINAL_GAME_WIDTH, GAME_HEIGHT / ORIGINAL_GAME_HEIGHT) for a uniform scale factor.
+        BALL_RADIUS = (8 / ORIGINAL_GAME_WIDTH) * GAME_WIDTH;
+
+        // Brick Dimensions & Layout
+        // Original BRICK_WIDTH calculation was (ORIGINAL_GAME_WIDTH / 10 - 4)
+        BRICK_WIDTH = ((ORIGINAL_GAME_WIDTH / 10 - 4) / ORIGINAL_GAME_WIDTH) * GAME_WIDTH;
+        BRICK_HEIGHT = (20 / ORIGINAL_GAME_HEIGHT) * GAME_HEIGHT;
+        BRICK_PADDING = (2 / ORIGINAL_GAME_WIDTH) * GAME_WIDTH;
+        BRICK_OFFSET_TOP = (30 / ORIGINAL_GAME_HEIGHT) * GAME_HEIGHT;
+        BRICK_OFFSET_LEFT = (2 / ORIGINAL_GAME_WIDTH) * GAME_WIDTH;
+
+        // Speeds: Scale horizontal speeds by width, vertical speeds by height
+        PADDLE_SPEED = (8 / ORIGINAL_GAME_WIDTH) * GAME_WIDTH;
+        INITIAL_BALL_SPEED_DX = (2 / ORIGINAL_GAME_WIDTH) * GAME_WIDTH;
+        INITIAL_BALL_SPEED_DY = (-4 / ORIGINAL_GAME_HEIGHT) * GAME_HEIGHT; // Maintain negative for direction
+        BALL_PADDLE_OFFSET = GAME_HEIGHT / ORIGINAL_GAME_HEIGHT; // Scale the offset
+
+        // Update Paddle Object properties
+        paddle.width = PADDLE_WIDTH;
+        paddle.height = PADDLE_HEIGHT;
+        paddle.speed = PADDLE_SPEED;
+        paddle.y = GAME_HEIGHT - PADDLE_HEIGHT - PADDLE_Y_OFFSET;
+        // Re-center paddle. This is important after a resize or at game start.
+        paddle.x = GAME_WIDTH / 2 - PADDLE_WIDTH / 2;
+
+        // If paddleElement exists, update its CSS size.
+        // drawPaddle() will use paddle.x and paddle.y to position it.
+        if (paddleElement) {
+            paddleElement.style.width = paddle.width + 'px';
+            paddleElement.style.height = paddle.height + 'px';
+        }
+
+        // Update existing balls' radius and their DOM elements' size
+        balls.forEach(ball => {
+            ball.radius = BALL_RADIUS; // Update the object's radius
+            if (ball.element) {
+                ball.element.style.width = (BALL_RADIUS * 2) + 'px';
+                ball.element.style.height = (BALL_RADIUS * 2) + 'px';
+            }
+        });
+
+        // Update existing bricks' properties and their DOM elements' size and position
+        // The actual DOM update for bricks will be handled by drawBricks, 
+        // but we ensure their data properties are correct here.
+        bricks.forEach((row, r) => {
+            row.forEach((brick, c) => {
+                if (brick) { // Check if brick exists at this position
+                    brick.width = BRICK_WIDTH;
+                    brick.height = BRICK_HEIGHT;
+                    brick.x = c * (BRICK_WIDTH + BRICK_PADDING) + BRICK_OFFSET_LEFT;
+                    brick.y = r * (BRICK_HEIGHT + BRICK_PADDING) + BRICK_OFFSET_TOP;
+                }
+            });
+        });
+    }
 
     function createPaddleElement() {
         const el = document.createElement('div');
@@ -150,12 +227,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // el.style.borderRadius = '50%'; // Will be handled by CSS
         return el;
     }
-    function drawBalls() { 
+    function drawBalls() {
         balls.forEach(ballObj => {
-            if (!ballObj.element) { 
-                ballObj.element = createBallElementDOM(ballObj); 
-                gameArea.appendChild(ballObj.element); 
+            if (!ballObj.element) {
+                ballObj.element = createBallElementDOM(ballObj);
+                gameArea.appendChild(ballObj.element);
             }
+            // Ensure radius change is reflected in element size (already done in updateGameElementSizesAndSpeeds, but safe to ensure here too for newly created balls if logic changes)
+            // However, createBallElementDOM already sets this based on ballObj.radius.
+            // The main place for updating existing elements is updateGameElementSizesAndSpeeds.
+            // ballObj.element.style.width = (ballObj.radius * 2) + 'px'; 
+            // ballObj.element.style.height = (ballObj.radius * 2) + 'px';
+
             ballObj.element.style.left = `${ballObj.x - ballObj.radius}px`;
             ballObj.element.style.top = `${ballObj.y - ballObj.radius}px`;
         });
@@ -206,20 +289,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     brick.element = el;
                     gameArea.appendChild(el);
                 } else {
-                    // Update HP class if brick HP has changed
-                    // Remove old hp class if it exists
+                    // Update existing brick element's style for position and dimensions
+                    brick.element.style.left = brick.x + 'px';
+                    brick.element.style.top = brick.y + 'px';
+                    brick.element.style.width = brick.width + 'px';
+                    brick.element.style.height = brick.height + 'px';
+
+                    // Update HP class if brick HP has changed (existing logic)
                     for (let i = brick.element.classList.length - 1; i >= 0; i--) {
                         const className = brick.element.classList[i];
                         if (className.startsWith('hp-')) {
                             brick.element.classList.remove(className);
                         }
                     }
-                    // Add new hp class
                     if (brick.hp > 0 && brick.hp !== Infinity) {
                         brick.element.classList.add(`hp-${brick.hp}`);
                     }
                 }
-            } else if (brick && brick.element) { 
+            } else if (brick && brick.element) { // Brick status is 0 (broken) but element exists
                 brick.element.remove(); 
                 brick.element = null; 
             }
@@ -262,8 +349,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentBall = balls[i];
             if (ballLaunched) { /* ... ball movement ... */
                 currentBall.x += currentBall.dx; currentBall.y += currentBall.dy;
-            } else if (balls.length === 1) {
-                currentBall.x = paddle.x + paddle.width / 2; currentBall.y = paddle.y - currentBall.radius - 1;
+            } else if (balls.length === 1) { // Assuming this is the main ball before launch
+                currentBall.x = paddle.x + paddle.width / 2; 
+                currentBall.y = paddle.y - currentBall.radius - BALL_PADDLE_OFFSET;
             }
 
             if (ballLaunched) { /* ... wall collisions ... */
@@ -275,9 +363,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (balls.length === 0) {
                         lives--; livesDisplay.textContent = lives; playSound(sfxLifeLost); deactivateAllPowerUps(true);
                         if (lives <= 0) { handleGameOver("Game Over!"); }
-                        else { ballLaunched = false;
-                               balls.push(createNewBall(paddle.x + paddle.width/2, paddle.y - BALL_RADIUS - 1, (Math.random() > 0.5 ? 1:-1)*currentBaseBallSpeed_dx, currentBaseBallSpeed_dy, `main_${Date.now()}`));
-                               gameArea.appendChild(balls[0].element);
+                        else { 
+                            ballLaunched = false;
+                            balls.push(createNewBall(paddle.x + paddle.width/2, paddle.y - BALL_RADIUS - BALL_PADDLE_OFFSET, (Math.random() > 0.5 ? 1:-1)*currentBaseBallSpeed_dx, currentBaseBallSpeed_dy, `main_${Date.now()}`));
+                            gameArea.appendChild(balls[0].element);
                         }
                     } continue;
                 }
@@ -638,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (balls.length === 0 && !isResetCtx && currentGameState === GAME_STATE.PLAYING) {
                     // Respawn a new main ball if all balls are gone
                     const newMainBall = createNewBall(
-                        paddle.x + paddle.width / 2, paddle.y - BALL_RADIUS - 1,
+                        paddle.x + paddle.width / 2, paddle.y - BALL_RADIUS - BALL_PADDLE_OFFSET,
                         currentBaseBallSpeed_dx, currentBaseBallSpeed_dy, // Use current base speed
                         `main_${Date.now()}`
                     );
@@ -756,9 +845,8 @@ document.addEventListener('DOMContentLoaded', () => {
     gameArea.addEventListener('mousemove', (e) => {
         if (currentGameState !== GAME_STATE.PLAYING) return;
         const rect = gameArea.getBoundingClientRect();
-        const scale = currentGameScale || 1; // Ensure scale is defined, default to 1
-
-        let mouseXInGame = (e.clientX - rect.left) / scale;
+        // currentGameScale is now always 1, so direct calculation is used.
+        let mouseXInGame = e.clientX - rect.left;
 
         let newPaddleX = mouseXInGame - (paddle.width / 2);
 
@@ -780,10 +868,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const touch = e.touches[0];
         const rect = gameArea.getBoundingClientRect();
-        const scale = currentGameScale || 1;
-
-        let touchXInGame = (touch.clientX - rect.left) / scale;
-        let touchYInGame = (touch.clientY - rect.top) / scale;
+        // currentGameScale is now always 1, so direct calculation is used.
+        let touchXInGame = touch.clientX - rect.left;
+        let touchYInGame = touch.clientY - rect.top;
 
         // Check if touch is on the paddle
         if (touchXInGame >= paddle.x &&
@@ -810,9 +897,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const touch = e.touches[0];
         const rect = gameArea.getBoundingClientRect();
-        const scale = currentGameScale || 1;
-
-        let touchXInGame = (touch.clientX - rect.left) / scale;
+        // currentGameScale is now always 1, so direct calculation is used.
+        let touchXInGame = touch.clientX - rect.left;
         let newPaddleX = touchXInGame - (paddle.width / 2);
 
         if (newPaddleX < 0) newPaddleX = 0;
@@ -873,35 +959,43 @@ document.addEventListener('DOMContentLoaded', () => {
         gameContainer.style.width = containerWidth + 'px';
         gameContainer.style.height = containerHeight + 'px';
 
-        // Update currentGameScale calculation for gameArea content scaling
-        if (gameArea.offsetWidth > 0 && gameArea.offsetHeight > 0) {
-            const scaleX = gameArea.offsetWidth / GAME_WIDTH;
-            const scaleY = gameArea.offsetHeight / GAME_HEIGHT;
-            currentGameScale = Math.min(scaleX, scaleY);
-            gameArea.style.transformOrigin = 'top left';
-            gameArea.style.transform = 'scale(' + currentGameScale + ')';
-        } else {
-            currentGameScale = 1;
-            gameArea.style.transform = 'scale(1)';
-        }
+        // Assign container dimensions to GAME_WIDTH and GAME_HEIGHT
+        GAME_WIDTH = containerWidth;
+        GAME_HEIGHT = containerHeight;
+
+        // Set gameArea dimensions directly
+        gameArea.style.width = GAME_WIDTH + 'px';
+        gameArea.style.height = GAME_HEIGHT + 'px';
+
+        // Remove scaling of gameArea itself, or set to 1
+        gameArea.style.transformOrigin = 'top left'; // Keep or remove if not needed
+        gameArea.style.transform = 'scale(1)';
+        currentGameScale = 1; // Game's internal logic will use GAME_WIDTH/HEIGHT directly
+        updateGameElementSizesAndSpeeds(); // Call after GAME_WIDTH and GAME_HEIGHT are updated
     }
 
     function init() {
+        // Call updateGameElementSizesAndSpeeds() early to ensure all dimensions and speeds are set
+        // according to the current GAME_WIDTH and GAME_HEIGHT (which might have been set by an initial resize).
+        updateGameElementSizesAndSpeeds(); 
+
         score = 0; lives = 3;
         scoreDisplay.textContent = score; livesDisplay.textContent = lives;
 
         currentLevelIndex = 0;
-        currentBaseBallSpeed_dx = INITIAL_BALL_SPEED_DX;
+        // INITIAL_BALL_SPEED_DX/DY are now correctly scaled by updateGameElementSizesAndSpeeds()
+        currentBaseBallSpeed_dx = INITIAL_BALL_SPEED_DX; 
         currentBaseBallSpeed_dy = INITIAL_BALL_SPEED_DY;
 
         deactivateAllPowerUps(true);
-        paddle.x = GAME_WIDTH / 2 - PADDLE_WIDTH / 2;
+        // paddle.x and paddle.y are set by updateGameElementSizesAndSpeeds()
         balls.forEach(b => { if (b.element) b.element.remove(); }); balls = [];
-        const initialBall = createNewBall( paddle.x + paddle.width / 2, paddle.y - BALL_RADIUS - 1,
+        // BALL_RADIUS and BALL_PADDLE_OFFSET are now scaled by updateGameElementSizesAndSpeeds()
+        const initialBall = createNewBall( paddle.x + paddle.width / 2, paddle.y - BALL_RADIUS - BALL_PADDLE_OFFSET, 
             currentBaseBallSpeed_dx, currentBaseBallSpeed_dy, "main");
         balls.push(initialBall); gameArea.appendChild(initialBall.element);
         ballLaunched = false;
-        loadLevel(currentLevelIndex);
+        loadLevel(currentLevelIndex); // loadLevel will use the scaled BRICK_* variables
         // gameRunning is true implicitly by currentGameState being set to PLAYING by caller
     }
 
@@ -983,13 +1077,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     nextLevelBtn.addEventListener('click', () => {
         currentLevelIndex++;
-        showGameElements();
-        currentBaseBallSpeed_dx = INITIAL_BALL_SPEED_DX+(currentLevelIndex*LEVEL_SPEED_INCREASE_FACTOR*INITIAL_BALL_SPEED_DX);
-        currentBaseBallSpeed_dy = INITIAL_BALL_SPEED_DY-(currentLevelIndex*LEVEL_SPEED_INCREASE_FACTOR*Math.abs(INITIAL_BALL_SPEED_DY));
+        // showGameElements calls resizeGameArea, which calls updateGameElementSizesAndSpeeds.
+        // This ensures INITIAL_BALL_SPEED_DX/DY are up-to-date before being used here.
+        showGameElements(); 
+        currentBaseBallSpeed_dx = INITIAL_BALL_SPEED_DX + (currentLevelIndex * LEVEL_SPEED_INCREASE_FACTOR * INITIAL_BALL_SPEED_DX);
+        currentBaseBallSpeed_dy = INITIAL_BALL_SPEED_DY - (currentLevelIndex * LEVEL_SPEED_INCREASE_FACTOR * Math.abs(INITIAL_BALL_SPEED_DY));
         // console.log(`Starting Level ${currentLevelIndex+1} base speed: dx=${currentBaseBallSpeed_dx.toFixed(2)}, dy=${currentBaseBallSpeed_dy.toFixed(2)}`);
         ballLaunched = false; deactivateAllPowerUps(true);
         balls.forEach(b => b.element.remove()); balls = [];
-        const newPrimaryBall = createNewBall(paddle.x+paddle.width/2, paddle.y-BALL_RADIUS-1, (Math.random()>0.5?1:-1)*currentBaseBallSpeed_dx, currentBaseBallSpeed_dy, `main_${Date.now()}`);
+        // Use scaled BALL_RADIUS and BALL_PADDLE_OFFSET
+        const newPrimaryBall = createNewBall(paddle.x+paddle.width/2, paddle.y - BALL_RADIUS - BALL_PADDLE_OFFSET, (Math.random()>0.5?1:-1)*currentBaseBallSpeed_dx, currentBaseBallSpeed_dy, `main_${Date.now()}`);
         balls.push(newPrimaryBall); if(newPrimaryBall.element && newPrimaryBall.element.parentElement !== gameArea) gameArea.appendChild(newPrimaryBall.element);
         loadLevel(currentLevelIndex);
         currentGameState = GAME_STATE.PLAYING;
