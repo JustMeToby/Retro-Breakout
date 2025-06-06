@@ -961,7 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Assign container dimensions to GAME_WIDTH and GAME_HEIGHT
         GAME_WIDTH = containerWidth;
-        GAME_HEIGHT = containerHeight;
+        GAME_HEIGHT = containerHeight-106;
 
         // Set gameArea dimensions directly
         gameArea.style.width = GAME_WIDTH + 'px';
