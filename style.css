@@ -62,7 +62,6 @@ body {
 }
 
 .ball-div {
-    background-color: #f00;
     background-image: url(img/ball.png);
     background-size: cover;
     /* position, width, height, left, top are set by JS */
