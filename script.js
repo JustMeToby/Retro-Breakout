@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // const ASPECT_RATIO = GAME_WIDTH / GAME_HEIGHT; 
     let PADDLE_WIDTH = 100; // Changed to let
     let PADDLE_HEIGHT = 15; // Changed to let
-    let PADDLE_Y_OFFSET = -20; // Changed to let
+    let PADDLE_Y_OFFSET = 20; // Changed to let
     let BALL_RADIUS = 8; // Changed to let
     let BRICK_WIDTH = (ORIGINAL_GAME_WIDTH / 10) - 4; // Initial value based on ORIGINAL_GAME_WIDTH, changed to let
     let BRICK_HEIGHT = 20; // Changed to let
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Paddle Dimensions
         PADDLE_WIDTH = (100 / ORIGINAL_GAME_WIDTH) * GAME_WIDTH;
         PADDLE_HEIGHT = (15 / ORIGINAL_GAME_HEIGHT) * GAME_HEIGHT;
-        PADDLE_Y_OFFSET = (20 / ORIGINAL_GAME_HEIGHT) * GAME_HEIGHT;
+        PADDLE_Y_OFFSET = (20 / ORIGINAL_GAME_HEIGHT) * GAME_HEIGHT; // Reverted to original base value 20
 
         // Ball Radius - Scaled by width for consistency. 
         // Consider Math.min(GAME_WIDTH / ORIGINAL_GAME_WIDTH, GAME_HEIGHT / ORIGINAL_GAME_HEIGHT) for a uniform scale factor.
