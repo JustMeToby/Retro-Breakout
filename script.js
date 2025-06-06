@@ -113,18 +113,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     let paddleElement;
 
-    function createPaddleElement() { /* ... same as before ... */
-        const svgNS = "http://www.w3.org/2000/svg"; const el = document.createElementNS(svgNS, "svg");
-        el.setAttribute('width', `${paddle.width}`); el.setAttribute('height', `${paddle.height}`);
-        el.style.position = 'absolute'; el.style.left = `${paddle.x}px`; el.style.top = `${paddle.y}px`;
-        el.id = 'paddle'; const rect = document.createElementNS(svgNS, "rect");
-        rect.setAttribute('width', `${paddle.width}`); rect.setAttribute('height', `${paddle.height}`);
-        rect.setAttribute('fill', '#0f0'); rect.setAttribute('shape-rendering', 'crispEdges');
-        el.appendChild(rect); return el;
+    function createPaddleElement() {
+        const el = document.createElement('div');
+        el.id = 'paddle';
+        el.style.position = 'absolute';
+        el.style.width = paddle.width + 'px';
+        el.style.height = paddle.height + 'px';
+        // el.style.backgroundColor = '#0f0'; // Will be handled by CSS
+        el.style.left = paddle.x + 'px'; // Initial position
+        el.style.top = paddle.y + 'px';   // Initial position
+        return el;
     }
-    function drawPaddle() { /* ... same as before ... */
-        if (!paddleElement) { paddleElement = createPaddleElement(); gameArea.appendChild(paddleElement); }
+
+    function drawPaddle() { 
+        if (!paddleElement) { 
+            paddleElement = createPaddleElement(); 
+            gameArea.appendChild(paddleElement); 
+        }
         paddleElement.style.left = `${paddle.x}px`;
+        paddleElement.style.top = `${paddle.y}px`; // Ensure top is also updated if paddle y can change (though not in current spec)
     }
 
     function createNewBall(x, y, dx, dy, idSuffix = '') {
@@ -132,17 +139,23 @@ document.addEventListener('DOMContentLoaded', () => {
         newBall.element = createBallElementDOM(newBall); return newBall;
     }
     let balls = [];
-    function createBallElementDOM(ballObj) { /* ... same as before ... */
-        const svgNS = "http://www.w3.org/2000/svg"; const el = document.createElementNS(svgNS, "svg");
-        const sideLength = ballObj.radius * 2; el.setAttribute('width', `${sideLength}`);
-        el.setAttribute('height', `${sideLength}`); el.style.position = 'absolute'; el.id = ballObj.id;
-        const rect = document.createElementNS(svgNS, "rect"); rect.setAttribute('width', `${sideLength}`);
-        rect.setAttribute('height', `${sideLength}`); rect.setAttribute('fill', '#f00');
-        rect.setAttribute('shape-rendering', 'crispEdges'); el.appendChild(rect); return el;
+    function createBallElementDOM(ballObj) {
+        const el = document.createElement('div');
+        el.id = ballObj.id;
+        el.classList.add('ball-div');
+        el.style.position = 'absolute';
+        el.style.width = (ballObj.radius * 2) + 'px';
+        el.style.height = (ballObj.radius * 2) + 'px';
+        // el.style.backgroundColor = '#f00'; // Will be handled by CSS
+        // el.style.borderRadius = '50%'; // Will be handled by CSS
+        return el;
     }
-    function drawBalls() { /* ... same as before ... */
+    function drawBalls() { 
         balls.forEach(ballObj => {
-            if (!ballObj.element) { ballObj.element = createBallElementDOM(ballObj); gameArea.appendChild(ballObj.element); }
+            if (!ballObj.element) { 
+                ballObj.element = createBallElementDOM(ballObj); 
+                gameArea.appendChild(ballObj.element); 
+            }
             ballObj.element.style.left = `${ballObj.x - ballObj.radius}px`;
             ballObj.element.style.top = `${ballObj.y - ballObj.radius}px`;
         });
@@ -167,35 +180,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         drawBricks();
     }
-    function drawBricks() { /* ... same as before ... */
+    function drawBricks() {
         bricks.forEach((row, r) => { row.forEach((brick, c) => {
             if (brick && brick.status === 1) {
                 if (!brick.element) {
-                    const svgNS = "http://www.w3.org/2000/svg"; const el = document.createElementNS(svgNS, "svg");
-                    el.setAttribute('width', `${brick.width}`); el.setAttribute('height', `${brick.height}`);
-                    el.style.position = 'absolute'; el.style.left = `${brick.x}px`; el.style.top = `${brick.y}px`;
-                    el.classList.add('brick'); const rect = document.createElementNS(svgNS, "rect");
-                    rect.setAttribute('width', '100%'); rect.setAttribute('height', '100%');
-                    rect.setAttribute('stroke', '#333'); rect.setAttribute('stroke-width', '1');
-                    rect.setAttribute('shape-rendering', 'crispEdges'); let fillColor;
-                    switch (brick.type) {
-                        case 'single': fillColor = '#00BFFF'; break;
-                        case 'double': fillColor = brick.hp === 2 ? '#FFFF00' : '#FFA500'; break;
-                        case 'triple': fillColor = brick.hp === 3 ? '#00FF00' : (brick.hp === 2 ? '#9ACD32' : '#BDB76B'); break;
-                        case 'unbreakable': fillColor = '#808080'; break;
-                        default: fillColor = (brick.type && brick.type.startsWith('powerup_')) ? '#FF00FF' : '#00f'; break;
+                    const el = document.createElement('div');
+                    el.style.position = 'absolute';
+                    el.style.left = brick.x + 'px';
+                    el.style.top = brick.y + 'px';
+                    el.style.width = brick.width + 'px';
+                    el.style.height = brick.height + 'px';
+                    el.classList.add('brick-div');
+
+                    // Add type-specific class
+                    if (brick.type.startsWith('powerup_')) {
+                        el.classList.add('brick-powerup');
+                    } else {
+                        el.classList.add(`brick-${brick.type}`);
                     }
-                    rect.setAttribute('fill', fillColor); el.appendChild(rect);
-                    brick.element = el; gameArea.appendChild(el);
+                    // Add HP-specific class if applicable
+                    if (brick.hp > 0 && brick.hp !== Infinity) {
+                        el.classList.add(`hp-${brick.hp}`);
+                    }
+
+                    brick.element = el;
+                    gameArea.appendChild(el);
                 } else {
-                    const rect = brick.element.querySelector('rect'); if (rect) { let newFillColor = rect.getAttribute('fill');
-                        switch (brick.type) {
-                            case 'double': newFillColor = brick.hp === 2 ? '#FFFF00' : '#FFA500'; break;
-                            case 'triple': newFillColor = brick.hp === 3 ? '#00FF00' : (brick.hp === 2 ? '#9ACD32' : '#BDB76B'); break;
-                        } rect.setAttribute('fill', newFillColor);
+                    // Update HP class if brick HP has changed
+                    // Remove old hp class if it exists
+                    for (let i = brick.element.classList.length - 1; i >= 0; i--) {
+                        const className = brick.element.classList[i];
+                        if (className.startsWith('hp-')) {
+                            brick.element.classList.remove(className);
+                        }
+                    }
+                    // Add new hp class
+                    if (brick.hp > 0 && brick.hp !== Infinity) {
+                        brick.element.classList.add(`hp-${brick.hp}`);
                     }
                 }
-            } else if (brick && brick.element) { brick.element.remove(); brick.element = null; }
+            } else if (brick && brick.element) { 
+                brick.element.remove(); 
+                brick.element = null; 
+            }
         }); });
     }
 
@@ -808,57 +835,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resizeGameArea() {
         const gameContainer = document.getElementById('game-container');
-        // const gameArea = document.getElementById('game-area'); // Already available in outer scope
-        // const scoreBoard = document.getElementById('score-board'); // Already available in outer scope
-        // const powerUpStatusDisplay = document.getElementById('powerup-status'); // Already available in outer scope
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const targetAspectRatio = 16 / 9;
 
-        // Ensure gameArea, scoreBoard, and powerUpStatusDisplay are accessible
-        // They are defined in the outer scope of the DOMContentLoaded listener, so they are accessible here.
+        let containerWidth;
+        let containerHeight;
 
-        let hudHeight = 0;
-        if (scoreBoard && scoreBoard.style.display !== 'none') {
-            hudHeight += scoreBoard.offsetHeight;
-        }
-        if (powerUpStatusDisplay && powerUpStatusDisplay.style.display !== 'none') {
-            hudHeight += powerUpStatusDisplay.offsetHeight;
-        }
-
-        let finalScaledGameAreaWidth;
-        let finalScaledGameAreaHeight;
-
-        if (window.innerWidth < 1024) {
-            const maxTotalAllowedHeight = window.innerHeight * 0.98;
-            let availableHeightForGameArea = maxTotalAllowedHeight - hudHeight;
-            if (availableHeightForGameArea < 50) {
-                availableHeightForGameArea = 50;
-            }
-
-            const targetScaledGameAreaWidth = window.innerWidth * 0.98;
-            const targetScaledGameAreaHeightBasedOnWidth = targetScaledGameAreaWidth / ASPECT_RATIO;
-
-            if (targetScaledGameAreaHeightBasedOnWidth <= availableHeightForGameArea) {
-                finalScaledGameAreaWidth = targetScaledGameAreaWidth;
-                finalScaledGameAreaHeight = targetScaledGameAreaHeightBasedOnWidth;
-            } else {
-                finalScaledGameAreaHeight = availableHeightForGameArea;
-                finalScaledGameAreaWidth = finalScaledGameAreaHeight * ASPECT_RATIO;
-            }
+        if (viewportWidth >= 1280 && viewportHeight >= 720) {
+            containerWidth = 1280;
+            containerHeight = 720;
         } else {
-            finalScaledGameAreaWidth = GAME_WIDTH;
-            finalScaledGameAreaHeight = GAME_HEIGHT;
-            // hudHeight is still calculated and used for gameContainer.style.height below
+            let widthBasedOnHeight = viewportHeight * targetAspectRatio;
+            let heightBasedOnWidth = viewportWidth / targetAspectRatio;
+
+            if (widthBasedOnHeight > viewportWidth) {
+                containerWidth = viewportWidth;
+                containerHeight = heightBasedOnWidth;
+            } else {
+                containerWidth = widthBasedOnHeight;
+                containerHeight = viewportHeight;
+            }
+
+            containerWidth = Math.min(containerWidth, 1280);
+            containerHeight = Math.min(containerHeight, 720);
+            
+            let currentRatio = containerWidth / containerHeight;
+            if (Math.abs(currentRatio - targetAspectRatio) > 0.01) { // Check if ratio is off by more than 1%
+                if (currentRatio > targetAspectRatio) { // container is too wide
+                   containerWidth = containerHeight * targetAspectRatio;
+                } else { // container is too tall
+                   containerHeight = containerWidth / targetAspectRatio;
+                }
+            }
         }
 
-        currentGameScale = finalScaledGameAreaWidth / GAME_WIDTH;
+        gameContainer.style.width = containerWidth + 'px';
+        gameContainer.style.height = containerHeight + 'px';
 
-        gameContainer.style.width = finalScaledGameAreaWidth + 'px';
-        gameContainer.style.height = (finalScaledGameAreaHeight + hudHeight) + 'px';
-
-        // Set gameArea base dimensions (unscaled) and transform origin for scaling (preserved)
-        gameArea.style.width = GAME_WIDTH + 'px';
-        gameArea.style.height = GAME_HEIGHT + 'px';
-        gameArea.style.transformOrigin = 'top left';
-        gameArea.style.transform = 'scale(' + currentGameScale + ')';
+        // Update currentGameScale calculation for gameArea content scaling
+        if (gameArea.offsetWidth > 0 && gameArea.offsetHeight > 0) {
+            const scaleX = gameArea.offsetWidth / GAME_WIDTH;
+            const scaleY = gameArea.offsetHeight / GAME_HEIGHT;
+            currentGameScale = Math.min(scaleX, scaleY);
+            gameArea.style.transformOrigin = 'top left';
+            gameArea.style.transform = 'scale(' + currentGameScale + ')';
+        } else {
+            currentGameScale = 1;
+            gameArea.style.transform = 'scale(1)';
+        }
     }
 
     function init() {
